@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI奇妙之旅：从魔法到科学 —— 交互式AI科普与实训平台</title>
+<meta name="description" content="一个让你亲手'教会'AI的互动探索平台——Learn AI by Using AI。适合10-15岁青少年的AI启蒙教育。">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ═══════ 顶部导航 ═══════ -->
+  <nav class="top-nav">
+    <div class="nav-brand">
+      <span class="mascot">🤖</span>
+      <span>AI奇妙之旅</span>
+    </div>
+    <button class="hamburger-btn" id="hamburger-btn" aria-label="菜单">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-stations" id="nav-stations">
+      <button class="nav-station active" data-station="home">🏠 首页</button>
+      <button class="nav-station" data-station="station1">① AI的诞生</button>
+      <button class="nav-station" data-station="station2">② AI的大脑</button>
+      <button class="nav-station" data-station="station3">③ AI实验室</button>
+      <button class="nav-station" data-station="station4">④ AI大挑战</button>
+      <button class="nav-station" data-station="station5">⑤ 资源库</button>
+    </div>
+  </nav>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!--  首页                                              -->
+  <!-- ════════════════════════════════════════════ -->
+  <section class="page active" id="page-home">
+    <div class="home-layout">
+      <div class="home-left">
+        <div class="home-badge">🎯 适合10-15岁 | 全程约15分钟</div>
+        <h1 class="home-title">
+          <span class="highlight">AI</span>奇妙之旅
+        </h1>
+        <p class="home-subtitle">从魔法到科学——交互式AI科普与实训平台</p>
+
+        <div class="home-dialogue">
+          <div class="mascot-name">🤖 小D说：</div>
+          <p>嗨！我是小D，一个住在数据世界里的机器人~ 你有没有好奇过：手机是怎么认出你脸的？AI写的诗和人写的诗哪个更好？来，跟我一起揭开AI"魔法"背后的科学秘密吧！</p>
+        </div>
+
+        <div class="home-actions">
+          <button class="btn btn-primary" id="btn-start">✨ 开始探索</button>
+          <button class="btn btn-outline" onclick="navigateTo('station3')">👀 先看AI实验室</button>
+          <span class="pre-test-link" onclick="showPreTest()">先做3道小测试？（不计分~）</span>
+        </div>
+      </div>
+
+      <div class="home-right">
+        <div class="mascot-area">
+          <span class="inner-bot">🤖</span>
+          <div class="particle"></div>
+          <div class="particle"></div>
+          <div class="particle"></div>
+          <div class="particle"></div>
+          <div class="particle"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!--  第一站：AI的诞生——轻点历史                          -->
+  <!-- ════════════════════════════════════════════ -->
+  <section class="page" id="page-station1">
+    <div class="station-header">
+      <div class="station-number">第一站</div>
+      <h2 class="station-title">🤖 AI从哪里来？——七十年的奇妙旅程</h2>
+      <p class="station-subtitle">点击每张卡片，发现AI成长路上的精彩故事！（每张卡片都藏着一个🥚彩蛋哦）</p>
+    </div>
+
+    <div class="xiaod-bubble">
+      <span class="bot-icon">🤖</span>
+      <span class="bot-text"><strong>小D：</strong><span id="xiaod-station1"></span></span>
+    </div>
+
+    <div class="card-grid" id="timeline-grid">
+      <!-- JS动态生成 -->
+    </div>
+
+    <div class="teacher-tip">
+      <strong>📝 教师小贴士：</strong>将学生分成6组，每组认领一个AI历史时代，用3分钟准备后向全班汇报该时代"最有趣的事实"。评选"最佳AI历史讲解员"。
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="navigateTo('home')">← 返回首页</button>
+      <button class="btn btn-primary" onclick="navigateTo('station2')">下一站：AI的大脑 →</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!--  第二站：AI的大脑——核心原理                            -->
+  <!-- ════════════════════════════════════════════ -->
+  <section class="page" id="page-station2">
+    <div class="station-header">
+      <div class="station-number">第二站</div>
+      <h2 class="station-title">🧠 AI怎么"学习"？——数据的旅程</h2>
+      <p class="station-subtitle">AI不是魔法师，而是一个"数据大胃王"。它吃进数据，消化理解，然后变得聪明。下面用四个实验来揭开这个过程！</p>
+    </div>
+
+    <div class="xiaod-bubble">
+      <span class="bot-icon">🤖</span>
+      <span class="bot-text"><strong>小D：</strong><span id="xiaod-station2"></span></span>
+    </div>
+
+    <!-- 实验1：数据喂养模拟器 -->
+    <div class="lab-area">
+      <h3>🧪 实验1："数据喂养"模拟器</h3>
+      <p class="lab-desc">拖拽左边的"数据食物"到AI模型嘴里，看看会发生什么！</p>
+      <div class="data-feeder">
+        <div class="data-pool">
+          <h4>📦 数据食物仓库</h4>
+          <div class="data-item" data-level="0">
+            🍎 100张猫的照片
+          </div>
+          <div class="data-item" data-level="1">
+            🍎 1,000张猫的照片
+          </div>
+          <div class="data-item" data-level="2">
+            🍎 10,000张猫的照片
+          </div>
+          <div class="data-item" data-level="3">
+            🍎 100,000张猫的照片
+          </div>
+        </div>
+        <div class="data-model" id="feeding-model">
+          <div class="model-icon">🤖</div>
+          <div class="accuracy">?%</div>
+          <div class="accuracy-label">识别准确率</div>
+          <div class="model-msg">拖拽左边的数据来"喂"我吧！</div>
+        </div>
+      </div>
+      <div id="feeding-insight" style="display:none;margin-top:16px;padding:16px;background:#FFF9E6;border-radius:8px;font-size:14px;">
+        💡 <strong>核心原理：</strong>数据越多，AI学得越好！就像你做题越多，考试成绩越高一样。AI的"智商"来自数据的"量"和"质"。
+      </div>
+    </div>
+
+    <!-- 实验2：决策树之旅 -->
+    <div class="lab-area">
+      <h3>🌳 实验2：决策树之旅</h3>
+      <p class="lab-desc">假设周末想去公园玩。让AI像玩"二十个问题"游戏一样，一步步判断"适不适合去"！</p>
+      <div class="tree-container">
+        <div class="tree-node question">
+          <strong id="tree-question">第1步：天气怎么样？</strong>
+        </div>
+        <div class="tree-options" id="tree-options">
+          <!-- JS动态填充 -->
+        </div>
+        <div id="tree-result" style="display:none;"></div>
+        <div id="tree-viz" style="margin-top:16px;">
+          <p style="text-align:center;color:#999;">🌳 决策树将在这里动态生长...</p>
+        </div>
+        <div id="tree-insight" style="display:none;padding:16px;background:#FFF9E6;border-radius:8px;font-size:14px;margin-top:12px;">
+          💡 <strong>核心原理：</strong>AI通过一连串"如果...就..."的判断，像树枝分叉一样逐层缩小范围。银行用这来判断能否贷款，医生用这来诊断疾病，邮箱用这来过滤垃圾邮件！
+        </div>
+      </div>
+    </div>
+
+    <!-- 实验3：神经网络可视化（Canvas动画版） -->
+    <div class="lab-area">
+      <h3>🔗 实验3：神经网络可视化</h3>
+      <p class="lab-desc">观察数据像"电流"一样在AI的"数字大脑"中流动——就像人脑的神经元传递信号！</p>
+      <div style="text-align:center;">
+        <!-- Canvas画布 -->
+        <canvas id="neural-canvas" width="800" height="400" style="max-width:100%;background:#FAFBFC;border-radius:12px;border:1px solid #E8EFF8;"></canvas>
+        <!-- 控制按钮 -->
+        <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-small" onclick="triggerNeuralPulse('cat')">🐱 输入一张"猫"的图片</button>
+          <button class="btn btn-outline btn-small" onclick="triggerNeuralPulse('dog')">🐶 输入一张"狗"的图片</button>
+          <button class="btn btn-outline btn-small" onclick="resetNeuralNet()">🔄 重置</button>
+        </div>
+        <!-- 实时状态显示 -->
+        <div id="neural-status" style="margin-top:12px;font-size:14px;color:#666;min-height:24px;">
+          👆 点击上方按钮，观察数据如何在神经网络中流动
+        </div>
+        <!-- 连线粗细图例 -->
+        <div style="margin-top:12px;display:flex;gap:24px;justify-content:center;font-size:12px;color:#999;">
+          <span>▬▬ 粗线 = 重要特征（如"尖耳朵"对判断"猫"很重要）</span>
+          <span>▬▬ 细线 = 次要特征</span>
+        </div>
+      </div>
+      <p style="margin-top:16px;padding:16px;background:#FFF9E6;border-radius:8px;font-size:14px;text-align:left;">
+        💡 <strong>核心原理：</strong>AI有很多"层"来处理信息。就像你认猫：先看耳朵→再看脸型→再看毛色→综合判断。AI也是这样一层一层分析，每层关注不同的特征。层数越多，AI能理解的规律越复杂！<br><br>
+        🔍 <strong>观察：</strong>点击"猫"和"狗"，输出层亮起的节点不同——这就是AI"分类"的过程。从输入到输出的每一条线都有自己的"权重"（粗细），这是AI在训练中学会的。
+      </p>
+    </div>
+
+    <!-- 实验4：偏见实验室 -->
+    <div class="lab-area" style="border:2px solid #F2994A;">
+      <h3>⚠️ 实验4：偏见实验室（AI伦理教育）</h3>
+      <p class="lab-desc">AI是不是永远正确？不一定！来看看——如果数据有偏见，AI也会有偏见。</p>
+      <div class="bias-comparison">
+        <div class="bias-column">
+          <h4>📦 数据组 A</h4>
+          <div class="bias-samples">
+            <div class="bias-sample">👨‍💻</div><div class="bias-sample">👨‍💻</div><div class="bias-sample">👨‍💻</div>
+            <div class="bias-sample">👨‍💻</div><div class="bias-sample">👨‍💻</div>
+          </div>
+          <p style="font-size:13px;color:#999;">全部是男性程序员</p>
+          <button class="bias-btn train" onclick="trainBias('a')">🔘 用这组训练AI</button>
+          <div class="bias-result" id="bias-result-a"></div>
+        </div>
+        <div class="bias-column">
+          <h4>📦 数据组 B</h4>
+          <div class="bias-samples">
+            <div class="bias-sample">👨‍💻</div><div class="bias-sample">👩‍💻</div><div class="bias-sample">👨‍💻</div>
+            <div class="bias-sample">👩‍💻</div><div class="bias-sample">👨‍💻</div>
+          </div>
+          <p style="font-size:13px;color:#999;">男女程序员都有</p>
+          <button class="bias-btn train" onclick="trainBias('b')">🔘 用这组训练AI</button>
+          <div class="bias-result" id="bias-result-b"></div>
+        </div>
+      </div>
+      <div id="bias-insight" style="display:none;margin-top:20px;padding:16px;background:#FFF9E6;border-radius:8px;font-size:14px;">
+        💡 <strong>核心原理：</strong>AI自己没有"想法"——它学到的偏见，来自人类给它的数据。<br><br>
+        ✅ <strong>避免AI偏见的关键：</strong>① 确保训练数据多样化 ② 定期检查AI判断是否公平 ③ 让不同背景的人参与AI设计<br><br>
+        🌟 <strong>记住：</strong>AI是工具，是人类在使用它。让AI变得公平的，是使用AI的人！
+      </div>
+    </div>
+
+    <div class="teacher-tip">
+      <strong>📝 教师小贴士：</strong>在偏见实验室后组织讨论："如果AI的训练数据里只有橘猫，它还能认出黑猫吗？"引导学生理解数据多样性的重要。进阶：推荐算法为什么只给你推一种内容？这会不会让你"看不到更大的世界"？
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="navigateTo('station1')">← AI的诞生</button>
+      <button class="btn btn-primary" onclick="navigateTo('station3')">下一站：AI实验室 →</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!--  第三站：AI实验室——动手调用                            -->
+  <!-- ════════════════════════════════════════════ -->
+  <section class="page" id="page-station3">
+    <div class="station-header">
+      <div class="station-number">第三站</div>
+      <h2 class="station-title">🧪 AI实验室：你就是AI创造者</h2>
+      <p class="station-subtitle">下面每个"实验台"都藏着一个AI工具。选一个你最感兴趣的，动手试试吧！</p>
+    </div>
+
+    <div class="xiaod-bubble">
+      <span class="bot-icon">🤖</span>
+      <span class="bot-text"><strong>小D：</strong><span id="xiaod-station3"></span></span>
+    </div>
+
+    <div class="lab-grid" id="lab-grid">
+      <div class="lab-module" data-lab="qa" onclick="openLabModule('qa')">
+        <div class="lab-icon">💬</div>
+        <h4>AI问答实验</h4>
+        <p>想问什么就问什么！看看AI能不能回答你的问题。</p>
+      </div>
+      <div class="lab-module" data-lab="poem" onclick="openLabModule('poem')">
+        <div class="lab-icon">✍️</div>
+        <h4>AI写诗工坊</h4>
+        <p>选一个主题和风格，让AI帮你写一首独一无二的诗！</p>
+      </div>
+      <div class="lab-module" data-lab="classify" onclick="openLabModule('classify')">
+        <div class="lab-icon">🖼️</div>
+        <h4>AI图像识别</h4>
+        <p>上传或描述一张图片，让AI告诉你这是什么！</p>
+      </div>
+      <div class="lab-module" data-lab="game" onclick="openLabModule('game')">
+        <div class="lab-icon">🎮</div>
+        <h4>小游戏工坊</h4>
+        <p>输入数据，训练一个AI决策模型——看它有多准！</p>
+      </div>
+      <div class="lab-module" data-lab="life" onclick="openLabModule('life')">
+        <div class="lab-icon">💡</div>
+        <h4>生活AI助手</h4>
+        <p>输入让你头疼的问题，让AI帮你出主意！</p>
+      </div>
+    </div>
+
+    <div id="lab-active-area" style="margin-top:20px;">
+      <p style="text-align:center;color:#999;">👆 点击上方任意实验台开始体验</p>
+    </div>
+
+    <div class="teacher-tip">
+      <strong>📝 教师小贴士：</strong>让每位学生选择不同的AI实验台，用5分钟创作一个"AI作品"，全班展示。评选"最具创意AI作品"、"最有用AI作品"、"最搞笑AI作品"。
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="navigateTo('station2')">← AI的大脑</button>
+      <button class="btn btn-primary" onclick="navigateTo('station4')">下一站：AI大挑战 →</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!--  第四站：AI大挑战——闯关检验                            -->
+  <!-- ════════════════════════════════════════════ -->
+  <section class="page" id="page-station4">
+    <div class="station-header">
+      <div class="station-number">第四站</div>
+      <h2 class="station-title">🏆 AI大挑战：你学到了什么？</h2>
+      <p class="station-subtitle">一共5关，每关1道题。答对解锁下一关和一枚徽章。集齐5枚 = "AI探索者"称号 + 专属AI伙伴！</p>
+    </div>
+
+    <div class="xiaod-bubble">
+      <span class="bot-icon">🤖</span>
+      <span class="bot-text"><strong>小D：</strong><span id="xiaod-station4"></span></span>
+    </div>
+
+    <!-- 徽章墙 -->
+    <div class="badge-wall" id="badge-wall">
+      <!-- JS动态填充 -->
+    </div>
+
+    <!-- 答题区 -->
+    <div id="quiz-container">
+      <!-- JS动态填充 -->
+    </div>
+
+    <!-- 清除进度 -->
+    <div style="text-align:center;margin-top:16px;">
+      <button class="btn btn-outline btn-small" id="btn-clear-progress" style="font-size:12px;color:#999;border-color:#ddd;">
+        🗑️ 清除学习进度
+      </button>
+    </div>
+
+    <div class="teacher-tip">
+      <strong>📝 教师小贴士：</strong>投影展示全班的"前后测成长曲线"（匿名化），让学生看到集体学习进步。引导思考："数据不仅能展示个人成长，还能展示群体学习情况——这就是用数据讲故事。"
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="navigateTo('station3')">← AI实验室</button>
+      <button class="btn btn-primary" onclick="navigateTo('station5')">下一站：资源库 →</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!--  第五站：AI学习资源库                                   -->
+  <!-- ════════════════════════════════════════════ -->
+  <section class="page" id="page-station5">
+    <div class="station-header">
+      <div class="station-number">第五站</div>
+      <h2 class="station-title">📚 AI学习资源库：继续你的探索之旅</h2>
+      <p class="station-subtitle">AI的世界还有更多精彩等着你！这里是小D为你准备的"宝藏地图"~</p>
+    </div>
+
+    <div class="xiaod-bubble">
+      <span class="bot-icon">🤖</span>
+      <span class="bot-text"><strong>小D：</strong><span id="xiaod-station5"></span></span>
+    </div>
+
+    <div class="resource-section">
+      <h3>📖 免费AI学习平台</h3>
+      <ul class="resource-list">
+        <li>国家高等教育智慧教育平台 ——《机器学习入门》免费课程</li>
+        <li>科大讯飞AI大学堂 —— 青少年AI启蒙系列</li>
+        <li>百度AI Studio —— 在线编程 + 免费GPU算力</li>
+        <li>阿里云天池 —— AI竞赛 + 海量数据集</li>
+        <li>B站"AI科技评论" —— 趣味科普视频</li>
+      </ul>
+    </div>
+
+    <div class="resource-section">
+      <h3>🛠️ 免费AI工具推荐</h3>
+      <ul class="resource-list">
+        <li>通义千问（阿里）—— 对话 / 写作 / 翻译</li>
+        <li>讯飞星火（科大讯飞）—— 对话 / 创作 / 代码</li>
+        <li>文心一言（百度）—— 内容生成 / 问答</li>
+        <li>Canva AI —— AI辅助设计</li>
+        <li>剪映 —— AI视频剪辑</li>
+      </ul>
+    </div>
+
+    <div class="resource-section">
+      <h3>📝 Prompt（提示词）入门指南</h3>
+      <p style="font-size:14px;color:#666;margin-bottom:12px;"><strong>什么是Prompt？</strong>就是你跟AI说话的方式。说得好，AI表现就好！</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:280px;background:#FFF5F5;padding:16px;border-radius:8px;">
+          <strong>❌ 差的Prompt：</strong><br>"写篇文章"
+        </div>
+        <div style="flex:1;min-width:280px;background:#F0FFF5;padding:16px;border-radius:8px;">
+          <strong>✅ 好的Prompt：</strong><br>"写一篇300字的小短文，主题是'我的朋友'，语气温暖，适合初中生阅读"
+        </div>
+      </div>
+      <p style="font-size:13px;color:#999;margin-top:12px;">💡 <strong>3个万能模板：</strong><br>1. "请用简单的话解释[概念]，假设我只有[年龄]岁"<br>2. "帮我[任务]，要求：1)... 2)... 3)..."<br>3. "你是一个[角色]，请用[风格]回答我的问题"</p>
+    </div>
+
+    <div class="resource-section">
+      <h3>📕 AI入门书单</h3>
+      <ul class="resource-list">
+        <li>《人工智能简史》—— 适合初中生</li>
+        <li>《给孩子的人工智能课》—— 亲子共读</li>
+        <li>《机器学习极简入门指南》—— 有编程基础可选读</li>
+        <li>《AI的25种可能》—— 了解AI前沿应用</li>
+      </ul>
+    </div>
+
+    <div class="resource-section">
+      <h3>📥 教学配套资源下载</h3>
+      <ul class="resource-list">
+        <li>📄 AI启蒙教案模板（Word，可直接使用）</li>
+        <li>📊 课堂教学PPT（含动画和讨论题）</li>
+        <li>📋 课堂活动设计手册</li>
+        <li>🖨️ 学生任务单（可打印分发）</li>
+        <li>🎯 课后延伸活动建议</li>
+      </ul>
+    </div>
+
+    <div class="teacher-tip" id="teacher-tip-s5">
+      <strong>📝 教师小贴士：</strong>通过家长群分享平台链接，鼓励亲子共学。课后作业："回家教会一个家人关于AI的一个新知识，下次课分享你的'教学成果'。"
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="navigateTo('station4')">← AI大挑战</button>
+      <button class="btn btn-primary" onclick="navigateTo('home')">🔄 重新开始奇妙旅程</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- ═══════ 前测弹窗 ═══════ -->
+<div class="modal-overlay" id="modal-preTest">
+  <div class="modal-box">
+    <div id="preTest-content">
+      <!-- JS动态填充 -->
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ JavaScript ═══════ -->
+<script src="js/data.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/api.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

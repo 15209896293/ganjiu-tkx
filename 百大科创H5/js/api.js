@@ -1,25 +1,50 @@
 /* ============================================================
    百大科创 H5 —— API 层：DeepSeek API 调用封装
-   可替换 API Key，兼容 OpenAI 格式的 API 端点
+   API Key 存储在浏览器 localStorage，不硬编码在源码中
    ============================================================ */
 
 var API_CONFIG = {
   baseURL: 'https://api.deepseek.com/v1',
-  apiKey: 'sk-c037224e1f1544fcbf1e459e1771a8f4',
   model: 'deepseek-chat',
   maxTokens: 600,
   temperature: 0.8
 };
 
+/** 从 localStorage 读取用户设置的 API Key */
+function getApiKey() {
+  return localStorage.getItem('ds_api_key') || '';
+}
+
+/** 保存 API Key 到 localStorage */
+function setApiKey(key) {
+  if (key && key.trim()) {
+    localStorage.setItem('ds_api_key', key.trim());
+    return true;
+  }
+  return false;
+}
+
+/** 检查是否已设置 API Key */
+function hasApiKey() {
+  var key = getApiKey();
+  return !!(key && key.length > 10);
+}
+
 /**
  * 调用 DeepSeek Chat API（兼容 OpenAI 格式）
- * @param {string} systemPrompt - 系统提示词，定义 AI 的角色和语气
- * @param {string} userMessage - 用户输入的消息
+ * @param {string} systemPrompt - 系统提示词
+ * @param {string} userMessage - 用户输入
  * @param {object} [options] - 可选参数 {maxTokens, temperature, timeout}
  * @returns {Promise<string>} AI 返回的文本内容
  */
 function callDeepSeek(systemPrompt, userMessage, options) {
   options = options || {};
+
+  // ★ 检查是否已设置 API Key
+  var apiKey = getApiKey();
+  if (!apiKey) {
+    return Promise.reject(new Error('请先设置 API Key 才能使用 AI 实验室~'));
+  }
 
   var controller = new AbortController();
   var timeoutMs = options.timeout || 30000;
@@ -31,7 +56,7 @@ function callDeepSeek(systemPrompt, userMessage, options) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + API_CONFIG.apiKey
+      'Authorization': 'Bearer ' + apiKey
     },
     body: JSON.stringify({
       model: API_CONFIG.model,
@@ -50,7 +75,7 @@ function callDeepSeek(systemPrompt, userMessage, options) {
       if (!response.ok) {
         var errMsg = 'API 请求失败（' + response.status + '）';
         if (response.status === 401) {
-          errMsg = 'API Key 无效，请检查配置~';
+          errMsg = 'API Key 无效，请检查后重新设置~';
         } else if (response.status === 429) {
           errMsg = '请求太快啦，AI 需要喘口气，请稍后再试~';
         } else if (response.status >= 500) {
@@ -80,10 +105,7 @@ function callDeepSeek(systemPrompt, userMessage, options) {
     });
 }
 
-/**
- * 重新提交上一次的请求（用于出错后重试）
- * @param {string} labId - 实验台 ID
- */
+/** 重新提交上一次的请求（用于出错后重试） */
 function retryLastLab(labId) {
   var input = document.getElementById('lab-input');
   if (input && STATE.lastLabQuery) {
@@ -92,9 +114,7 @@ function retryLastLab(labId) {
   }
 }
 
-/**
- * HTML 转义，防止 XSS
- */
+/** HTML 转义 */
 function escapeHtml(text) {
   var div = document.createElement('div');
   div.appendChild(document.createTextNode(text));

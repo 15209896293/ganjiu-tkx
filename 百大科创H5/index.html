@@ -5,9 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI奇妙之旅：从魔法到科学 —— 交互式AI科普与实训平台</title>
 <meta name="description" content="一个让你亲手'教会'AI的互动探索平台——Learn AI by Using AI。适合10-15岁青少年的AI启蒙教育。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
+<canvas id="bg-canvas"></canvas>
 
 <div class="app-container">
 
@@ -111,6 +117,8 @@
       <span class="bot-text"><strong>小D：</strong><span id="xiaod-station2"></span></span>
     </div>
 
+    <canvas id="garden-canvas" class="garden-canvas"></canvas>
+
     <!-- 实验1：数据喂养模拟器 -->
     <div class="lab-area">
       <h3>🧪 实验1："数据喂养"模拟器</h3>
@@ -162,6 +170,33 @@
           💡 <strong>核心原理：</strong>AI通过一连串"如果...就..."的判断，像树枝分叉一样逐层缩小范围。银行用这来判断能否贷款，医生用这来诊断疾病，邮箱用这来过滤垃圾邮件！
         </div>
       </div>
+    </div>
+
+    <!-- 模块四：AI时光机 -->
+    <div class="lab-area" id="time-machine-area">
+      <h3>⏳ AI时光机：预测未来</h3>
+      <p class="lab-desc">调整天气舒适度，用历史数据训练线性回归模型，预测明天公园会有多少游客！</p>
+      <div class="time-machine-layout">
+        <div class="time-data-table">
+          <h4>📊 历史数据（近7天）</h4>
+          <table class="data-table">
+            <tr><th>天气舒适度</th><th>游客人数</th></tr>
+            <tr><td>3</td><td>120</td></tr><tr><td>5</td><td>280</td></tr>
+            <tr><td>2</td><td>95</td></tr><tr><td>7</td><td>410</td></tr>
+            <tr><td>4</td><td>200</td></tr><tr><td>8</td><td>480</td></tr>
+            <tr><td>6</td><td>350</td></tr>
+          </table>
+        </div>
+        <div class="time-predict-area">
+          <div class="slider-group">
+            <label>明天的天气舒适度：<strong id="comfort-display">5</strong></label>
+            <input type="range" id="comfort-slider" min="0" max="10" value="5" step="0.5" oninput="predictVisitors()">
+            <div class="slider-range"><span>0（极差）</span><span>10（极好）</span></div>
+          </div>
+          <p class="regression-result" id="regression-result">👆 拖动滑块预测游客人数</p>
+        </div>
+      </div>
+      <canvas id="regression-canvas" class="regression-canvas"></canvas>
     </div>
 
     <!-- 实验3：神经网络可视化（Canvas动画版） -->
@@ -230,6 +265,13 @@
       <strong>📝 教师小贴士：</strong>在偏见实验室后组织讨论："如果AI的训练数据里只有橘猫，它还能认出黑猫吗？"引导学生理解数据多样性的重要。进阶：推荐算法为什么只给你推一种内容？这会不会让你"看不到更大的世界"？
     </div>
 
+    <!-- 模块三：AI偏见检测器 -->
+    <div class="lab-area" id="bias-detector-area">
+      <h3>🔍 AI偏见检测器：更多案例</h3>
+      <p class="lab-desc">偏见不只存在于招聘中——来看看AI在医疗、求职、内容推荐中可能出现的偏见。</p>
+      <div class="bias-detector-grid" id="bias-detector-container"><!-- JS动态生成 --></div>
+    </div>
+
     <div class="nav-buttons">
       <button class="btn btn-outline" onclick="navigateTo('station1')">← AI的诞生</button>
       <button class="btn btn-primary" onclick="navigateTo('station3')">下一站：AI实验室 →</button>
@@ -249,6 +291,19 @@
     <div class="xiaod-bubble">
       <span class="bot-icon">🤖</span>
       <span class="bot-text"><strong>小D：</strong><span id="xiaod-station3"></span></span>
+    </div>
+
+    <!-- API Key 设置面板 -->
+    <div class="api-key-panel" id="api-key-panel">
+      <details id="api-key-details">
+        <summary>⚙️ API 设置（点击展开）</summary>
+        <div class="api-key-form">
+          <input type="password" id="api-key-input" placeholder="粘贴你的 DeepSeek API Key" autocomplete="off">
+          <button class="btn btn-primary btn-small" onclick="saveApiKey()">🔑 保存</button>
+        </div>
+        <p class="api-key-hint">不会上传，只存在你的浏览器里。去 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com</a> 获取</p>
+        <p class="api-key-status" id="api-key-status"></p>
+      </details>
     </div>
 
     <div class="lab-grid" id="lab-grid">
@@ -411,6 +466,13 @@
       <strong>📝 教师小贴士：</strong>通过家长群分享平台链接，鼓励亲子共学。课后作业："回家教会一个家人关于AI的一个新知识，下次课分享你的'教学成果'。"
     </div>
 
+    <!-- 模块五：AI创作画廊 -->
+    <div class="lab-area" id="gallery-area">
+      <h3>🖼️ AI创作画廊</h3>
+      <p class="lab-desc">你在AI实验室的每一次创作都会自动保存在这里！</p>
+      <div id="gallery-container"><!-- JS动态生成 --></div>
+    </div>
+
     <div class="nav-buttons">
       <button class="btn btn-outline" onclick="navigateTo('station4')">← AI大挑战</button>
       <button class="btn btn-primary" onclick="navigateTo('home')">🔄 重新开始奇妙旅程</button>
@@ -433,6 +495,7 @@
 <script src="js/sound.js"></script>
 <script src="js/api.js"></script>
 <script src="js/main.js"></script>
+<script src="js/particle-bg.js"></script>
 
 </body>
 </html>

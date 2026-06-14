@@ -16,7 +16,10 @@ var STATE = {
   feedingLevel: 0,
   decisionStep: 0,
   biasTrained: { a: false, b: false },
-  aiLabUsed: false
+  aiLabUsed: false,
+  personalityDims: { rational: 50, serious: 50, concise: 50 },
+  partnerName: '',
+  partnerColor: '#00D4FF'
 };
 
 // ── 数据持久化（localStorage）──
@@ -32,6 +35,9 @@ function saveProgress() {
       earnedBadges: STATE.earnedBadges,
       feedingLevel: STATE.feedingLevel,
       aiLabUsed: STATE.aiLabUsed,
+      personalityDims: STATE.personalityDims,
+      partnerName: STATE.partnerName,
+      partnerColor: STATE.partnerColor,
       savedAt: new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -52,6 +58,9 @@ function loadProgress() {
     if (data.earnedBadges) STATE.earnedBadges = data.earnedBadges;
     if (data.feedingLevel !== undefined) STATE.feedingLevel = data.feedingLevel;
     if (data.aiLabUsed !== undefined) STATE.aiLabUsed = data.aiLabUsed;
+    if (data.personalityDims) STATE.personalityDims = data.personalityDims;
+    if (data.partnerName) STATE.partnerName = data.partnerName;
+    if (data.partnerColor) STATE.partnerColor = data.partnerColor;
     return true;
   } catch (e) {
     console.warn('加载进度失败:', e);
@@ -70,6 +79,9 @@ function clearProgress() {
     STATE.earnedBadges = [];
     STATE.feedingLevel = 0;
     STATE.aiLabUsed = false;
+    STATE.personalityDims = { rational: 50, serious: 50, concise: 50 };
+    STATE.partnerName = '';
+    STATE.partnerColor = '#00D4FF';
     // 刷新显示
     updateBadgeWall();
     loadQuizQuestion();
@@ -214,6 +226,9 @@ function initStation2() {
   setTimeout(function() {
     initNeuralNet();
     initDragAndDrop();
+    initDataGarden();
+    renderBiasDetector();
+    initTimeMachine();
   }, 100);
 }
 
@@ -418,8 +433,10 @@ function spawnDropParticles(cx, cy) {
 
 // 保留 feedData 函数（拖拽和点击都可用）
 function feedData(level) {
+  var prevLevel = STATE.feedingLevel;
   STATE.feedingLevel = level;
   updateFeedingDisplay();
+  updateGardenByFeeding(level, prevLevel);
 }
 
 function updateFeedingDisplay() {
@@ -568,6 +585,7 @@ function trainBias(set) {
 function initStation3() {
   var xiaod = document.getElementById('xiaod-station3');
   if (xiaod) xiaod.textContent = XIAOD_DIALOGUES.station3;
+  initApiKeyPanel();
 }
 
 function openLabModule(labId) {
@@ -618,6 +636,45 @@ function quickPrompt(text) {
   if (input) input.value = text;
 }
 
+// ── API Key 设置面板 ──
+
+function saveApiKey() {
+  var input = document.getElementById('api-key-input');
+  var status = document.getElementById('api-key-status');
+  if (!input || !status) return;
+  var key = input.value.trim();
+  if (!key || key.length < 10) {
+    status.textContent = '❌ 请输入有效的 API Key（至少10个字符）';
+    status.style.color = '#FF4466';
+    return;
+  }
+  if (setApiKey(key)) {
+    status.textContent = '✅ Key 已保存！现在可以使用 AI 实验室了~';
+    status.style.color = '#00FF88';
+    input.value = '';
+    var details = document.getElementById('api-key-details');
+    if (details) details.open = false;
+  } else {
+    status.textContent = '❌ 保存失败，请重试';
+    status.style.color = '#FF4466';
+  }
+}
+
+function initApiKeyPanel() {
+  var status = document.getElementById('api-key-status');
+  var details = document.getElementById('api-key-details');
+  if (!status) return;
+  if (hasApiKey()) {
+    status.textContent = '✅ 已配置 Key，可以正常使用';
+    status.style.color = '#00FF88';
+    if (details) details.open = false;
+  } else {
+    status.textContent = '⚠️ 请设置 API Key 才能使用 AI 实验室';
+    status.style.color = '#FFB800';
+    if (details) details.open = true;
+  }
+}
+
 function submitLab(labId) {
   var input = document.getElementById('lab-input');
   var response = document.getElementById('lab-response');
@@ -649,8 +706,18 @@ function submitLab(labId) {
       response.innerHTML = '<div class="ai-reply">' + escapeHtml(reply) + '</div>';
       STATE.aiLabUsed = true;
       saveProgress();
+      saveToGallery(labId, text, reply);
     })
     .catch(function (error) {
+      // 无Key时自动展开设置面板
+      if (error.message.indexOf('API Key') !== -1 || error.message.indexOf('请先设置') !== -1) {
+        var details = document.getElementById('api-key-details');
+        if (details) details.open = true;
+        var status = document.getElementById('api-key-status');
+        if (status) { status.textContent = '⚠️ 请设置 API Key 才能使用 AI 实验室'; status.style.color = '#FFB800'; }
+        var keyInput = document.getElementById('api-key-input');
+        if (keyInput) keyInput.focus();
+      }
       response.innerHTML = '<div class="ai-error">'
         + '<p>😅 ' + escapeHtml(error.message) + '</p>'
         + '<button class="btn btn-outline btn-small retry-btn" onclick="retryLastLab(\'' + labId + '\')">🔄 再试一次</button>'
@@ -770,34 +837,32 @@ function showQuizComplete() {
     html += '<div class="badge-item earned"><div class="badge-icon">' + BADGES[b].icon + '</div><div class="badge-name">' + BADGES[b].name + '</div><div class="badge-desc">' + BADGES[b].desc + '</div></div>';
   }
   html += '</div>';
-  // 专属AI伙伴
-  html += '<div style="margin-top:24px;padding:24px;background:linear-gradient(135deg,#F5F9FF,#FFF3E6);border-radius:12px;">';
-  html += '<h3 style="margin-bottom:12px;">🤖 你的专属AI伙伴</h3>';
-  html += '<p style="font-size:14px;color:#666;">选择你最需要的功能：</p>';
-  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:16px 0;" id="partner-opts">';
-  var partnerOpts = ['帮我整理笔记','给我出数学题','教我写诗','给我推荐书籍','做我的学习闹钟','陪我聊天'];
-  for (var p = 0; p < partnerOpts.length; p++) {
-    html += '<label style="padding:8px 14px;background:#fff;border-radius:20px;cursor:pointer;font-size:13px;border:1px solid #E8EFF8;"><input type="checkbox" onchange="updatePartner()"> ' + partnerOpts[p] + '</label>';
+  // 模块二：AI性格养成器
+  html += '<div class="personality-maker">';
+  html += '<h3>🤖 打造你的专属AI伙伴</h3>';
+  var dims = [
+    { id: 'rational', left: '😎 理性', right: '🥰 感性', val: STATE.personalityDims.rational },
+    { id: 'serious', left: '📐 严谨', right: '😂 幽默', val: STATE.personalityDims.serious },
+    { id: 'concise', left: '✂️ 简洁', right: '📢 话痨', val: STATE.personalityDims.concise }
+  ];
+  for (var d = 0; d < dims.length; d++) {
+    html += '<div class="personality-slider-row">';
+    html += '<span class="slider-label left">' + dims[d].left + '</span>';
+    html += '<input type="range" class="personality-slider" id="slider-' + dims[d].id + '" min="0" max="100" value="' + dims[d].val + '" oninput="updatePersonalityPreview()">';
+    html += '<span class="slider-label right">' + dims[d].right + '</span>';
+    html += '</div>';
   }
-  html += '</div><div id="partner-card" style="margin-top:16px;"></div></div>';
+  html += '<div class="personality-controls">';
+  html += '<input type="text" id="partner-name-input" class="partner-name-input" placeholder="给你的AI伙伴起个名字" value="' + (STATE.partnerName||'') + '" oninput="updatePersonalityPreview()">';
+  html += '<input type="color" id="partner-color-pick" class="partner-color-pick" value="' + (STATE.partnerColor||'#00D4FF') + '" onchange="updatePersonalityPreview()">';
+  html += '<button class="btn btn-primary btn-small" onclick="generateCharacterCard()">✨ 孵化AI伙伴</button>';
+  html += '</div>';
+  html += '<div id="personality-preview" class="personality-preview"></div>';
+  html += '<div id="character-card-container" class="character-card-container"></div>';
+  html += '</div>';
   html += '</div>';
   container.innerHTML = html;
-}
-
-function updatePartner() {
-  var card = document.getElementById('partner-card');
-  if (!card) return;
-  var checked = [];
-  var inputs = document.querySelectorAll('#partner-opts input:checked');
-  for (var i = 0; i < inputs.length; i++) {
-    checked.push(inputs[i].parentElement.textContent.trim());
-  }
-  if (checked.length === 0) { card.innerHTML = ''; return; }
-  card.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06);text-align:center;">'
-    + '<div style="font-size:48px;">🤖</div>'
-    + '<div style="font-size:18px;font-weight:700;color:#1A3A6B;">你的专属AI伙伴：<strong style="color:#2B579A;">小智</strong></div>'
-    + '<div style="font-size:13px;color:#666;margin-top:8px;">它最擅长：' + checked.slice(0,3).join('、') + '</div>'
-    + '<div style="font-size:14px;color:#666;margin-top:8px;font-style:italic;">"嗨！我是小智，你的学习好伙伴。让我们一起进步吧！"</div></div>';
+  setTimeout(function () { updatePersonalityPreview(); }, 50);
 }
 
 function updateBadgeWall() {
@@ -819,6 +884,8 @@ function updateBadgeWall() {
 function initStation5() {
   var xiaod = document.getElementById('xiaod-station5');
   if (xiaod) xiaod.textContent = XIAOD_DIALOGUES.station5;
+  ensureGalleryPresets();
+  renderGallery();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1251,3 +1318,613 @@ document.addEventListener('DOMContentLoaded', function() {
   navigateTo('home');
   console.log('✅ 初始化完成');
 });
+
+// ═══════════════════════════════════════════════════════
+//  模块：数据花园粒子系统
+// ═══════════════════════════════════════════════════════
+
+var gardenParticles = [];
+var gardenAnimId = null;
+var gardenFlashUntil = 0;
+
+function initDataGarden() {
+  var canvas = document.getElementById('garden-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+
+  function resize() {
+    var container = canvas.parentElement;
+    var w = container ? container.clientWidth : 600;
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = w * dpr;
+    canvas.height = 200 * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = '200px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+  }
+  resize();
+  window.addEventListener('resize', function () { resize(); buildGardenParticles(STATE.feedingLevel); });
+
+  buildGardenParticles(STATE.feedingLevel);
+
+  function animate() {
+    if (!canvas || !canvas.parentElement) { gardenAnimId = null; return; }
+    var now = Date.now();
+    var flashing = now < gardenFlashUntil;
+    var w = parseInt(canvas.style.width) || 600;
+    var h = 200;
+
+    ctx.clearRect(0, 0, w, h);
+
+    for (var i = 0; i < gardenParticles.length; i++) {
+      var p = gardenParticles[i];
+      // 布朗运动
+      p.vx += (Math.random() - 0.5) * 0.3;
+      p.vy += (Math.random() - 0.5) * 0.3;
+      p.vx *= 0.98; p.vy *= 0.98;
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // 边界
+      if (p.x < 0) { p.x = 0; p.vx *= -1; }
+      if (p.x > w) { p.x = w; p.vx *= -1; }
+      if (p.y < 0) { p.y = 0; p.vy *= -1; }
+      if (p.y > h) { p.y = h; p.vy *= -1; }
+
+      // 旋转漩涡（level=3时）
+      if (p.orbitR !== undefined) {
+        p.orbitAngle = (p.orbitAngle || 0) + 0.015;
+        p.x = w / 2 + Math.cos(p.orbitAngle) * p.orbitR;
+        p.y = h / 2 + Math.sin(p.orbitAngle) * p.orbitR;
+        p.orbitR += 0.1;
+        if (p.orbitR > Math.min(w, h) * 0.6) p.orbitR = Math.min(w, h) * 0.1;
+      }
+
+      var alpha = flashing ? 1 : p.alpha;
+      var color = flashing ? '#FFFFFF' : ['#4A90D9', '#7B2CBF', '#00D4FF'][p.colorIdx || 0];
+
+      // 光晕
+      var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3);
+      grad.addColorStop(0, color);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // 核心
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    gardenAnimId = requestAnimationFrame(animate);
+  }
+  cancelAnimationFrame(gardenAnimId);
+  gardenAnimId = requestAnimationFrame(animate);
+}
+
+function buildGardenParticles(level) {
+  var counts = [30, 60, 100, 160];
+  var count = counts[level] || 30;
+  var speedFactor = 0.3 + level * 0.25;
+  var canvas = document.getElementById('garden-canvas');
+  var w = canvas ? (parseInt(canvas.style.width) || 600) : 600;
+  var h = 200;
+  var colors = ['#4A90D9', '#7B2CBF', '#00D4FF'];
+
+  gardenParticles = [];
+  for (var i = 0; i < count; i++) {
+    var p = {
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * speedFactor * 2,
+      vy: (Math.random() - 0.5) * speedFactor * 2,
+      r: 1.5 + Math.random() * 1.5,
+      alpha: 0.2 + Math.random() * 0.3,
+      colorIdx: Math.floor(Math.random() * 3)
+    };
+    // level=3: 旋转漩涡
+    if (level === 3) {
+      p.orbitR = Math.random() * Math.min(w, h) * 0.5;
+      p.orbitAngle = Math.random() * Math.PI * 2;
+    }
+    gardenParticles.push(p);
+  }
+}
+
+function updateGardenByFeeding(level, prevLevel) {
+  if (level > prevLevel) {
+    gardenFlashUntil = Date.now() + 400;
+  }
+  buildGardenParticles(level);
+}
+
+// ═══════════════════════════════════════════════════════
+//  模块：AI性格养成器
+// ═══════════════════════════════════════════════════════
+
+function updatePersonalityPreview() {
+  var r = parseInt(document.getElementById('slider-rational')?.value || 50);
+  var s = parseInt(document.getElementById('slider-serious')?.value || 50);
+  var c = parseInt(document.getElementById('slider-concise')?.value || 50);
+  var name = document.getElementById('partner-name-input')?.value || '';
+  var color = document.getElementById('partner-color-pick')?.value || '#00D4FF';
+
+  STATE.personalityDims = { rational: r, serious: s, concise: c };
+  STATE.partnerName = name;
+  STATE.partnerColor = color;
+
+  var emoji = getPersonalityEmoji(r, s, c);
+  var desc = getPersonalityDesc(r, s, c);
+  var displayName = name || '未命名AI伙伴';
+
+  var preview = document.getElementById('personality-preview');
+  if (preview) {
+    preview.innerHTML = '<div style="text-align:center;padding:12px;">'
+      + '<span style="font-size:48px;">' + emoji + '</span>'
+      + '<p style="font-size:16px;font-weight:700;color:#1A3A6B;">' + displayName + '</p>'
+      + '<p style="font-size:13px;color:#666;">' + desc + '</p>'
+      + '</div>';
+  }
+}
+
+function generateCharacterCard() {
+  updatePersonalityPreview();
+  saveProgress();
+  var r = STATE.personalityDims.rational;
+  var s = STATE.personalityDims.serious;
+  var c = STATE.personalityDims.concise;
+  var name = STATE.partnerName || '未命名AI伙伴';
+  var color = STATE.partnerColor || '#00D4FF';
+  var emoji = getPersonalityEmoji(r, s, c);
+  var desc = getPersonalityDesc(r, s, c);
+
+  var container = document.getElementById('character-card-container');
+  if (!container) return;
+  container.innerHTML = '<div id="character-card-print">'
+    + '<div style="font-size:64px;">' + emoji + '</div>'
+    + '<h3>' + name + '</h3>'
+    + '<p>' + desc + '</p>'
+    + '<canvas id="radar-canvas" width="260" height="260" style="margin:12px auto;display:block;"></canvas>'
+    + '<p style="font-size:12px;color:#999;">🌈 性格雷达图</p>'
+    + '<button class="btn btn-outline btn-small" onclick="saveCharacterCard()" style="margin-top:8px;">📸 长按保存图片</button>'
+    + '</div>';
+  setTimeout(function () { drawRadarChart(r, s, c, color); }, 100);
+}
+
+function drawRadarChart(rational, serious, concise, color) {
+  var canvas = document.getElementById('radar-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  var cx = w / 2, cy = h / 2;
+  var maxR = 90;
+  var angles = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6]; // 上、右下、左下
+  var labels = ['理性↔感性', '严谨↔幽默', '简洁↔话痨'];
+
+  ctx.clearRect(0, 0, w, h);
+
+  // 5层背景网格
+  for (var level = 1; level <= 5; level++) {
+    var r = (maxR / 5) * level;
+    ctx.beginPath();
+    for (var i = 0; i < 3; i++) {
+      var x = cx + Math.cos(angles[i]) * r;
+      var y = cy + Math.sin(angles[i]) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // 3条轴线
+  for (var j = 0; j < 3; j++) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angles[j]) * maxR, cy + Math.sin(angles[j]) * maxR);
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // 数据多边形
+  var values = [rational, serious, concise];
+  ctx.beginPath();
+  for (var k = 0; k < 3; k++) {
+    var vr = (values[k] / 100) * maxR;
+    var vx = cx + Math.cos(angles[k]) * vr;
+    var vy = cy + Math.sin(angles[k]) * vr;
+    if (k === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+  }
+  ctx.closePath();
+  var rgbaColor = hexToRgba(color, 0.3);
+  ctx.fillStyle = rgbaColor;
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 数据点
+  for (var m = 0; m < 3; m++) {
+    var dr = (values[m] / 100) * maxR;
+    var dx = cx + Math.cos(angles[m]) * dr;
+    var dy = cy + Math.sin(angles[m]) * dr;
+    ctx.beginPath();
+    ctx.arc(dx, dy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // 标签
+  ctx.fillStyle = '#666';
+  ctx.font = '12px "Microsoft YaHei"';
+  ctx.textAlign = 'center';
+  for (var n = 0; n < 3; n++) {
+    var lx = cx + Math.cos(angles[n]) * (maxR + 20);
+    var ly = cy + Math.sin(angles[n]) * (maxR + 20);
+    ctx.fillText(labels[n], lx, ly + 4);
+  }
+}
+
+function hexToRgba(hex, alpha) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+function getPersonalityEmoji(r, s, c) {
+  if (r > 60 && s > 60) return String.fromCodePoint(0x1F9E0);  // 🧠
+  if (r < 40 && s > 60) return String.fromCodePoint(0x1F61C);  // 😜
+  if (r > 60 && s < 40) return String.fromCodePoint(0x1F913);  // 🤓
+  if (r < 40 && s < 40 && c < 40) return String.fromCodePoint(0x2764);  // ❤️
+  if (c > 70) return String.fromCodePoint(0x1F4E2);  // 📢
+  if (c < 30) return String.fromCodePoint(0x1F92B);  // 🤫
+  if (r > 70) return String.fromCodePoint(0x1F9EE);  // 🧮
+  return String.fromCodePoint(0x1F916);  // 🤖
+}
+
+function getPersonalityDesc(r, s, c) {
+  var part1 = r > 60 ? '理性思考者' : (r < 40 ? '感性浪漫派' : '情理兼备');
+  var part2 = s > 60 ? '幽默大师' : (s < 40 ? '严谨学者' : '收放自如');
+  var part3 = c > 60 ? '话匣子' : (c < 40 ? '惜字如金' : '张弛有度');
+  return part1 + '的' + part2 + '，' + part3 + '——这就是你的专属AI！';
+}
+
+function saveCharacterCard() {
+  if (typeof html2canvas === 'undefined') {
+    alert('图片生成功能需要加载 html2canvas 库，请检查网络连接后刷新页面~');
+    return;
+  }
+  var el = document.getElementById('character-card-print');
+  if (!el) return;
+  html2canvas(el, { backgroundColor: '#FFFFFF', scale: 2 }).then(function (canvas) {
+    var link = document.createElement('a');
+    link.download = '我的AI伙伴_' + (STATE.partnerName || '未命名') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(function () {
+    alert('图片生成失败，请重试~');
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  模块：AI偏见检测器
+// ═══════════════════════════════════════════════════════
+
+var BIAS_SCENARIOS = [
+  { id:'medical', icon:'🏥', title:'医疗诊断偏见',
+    desc:'AI学习的数据中95%是浅色皮肤患者的皮肤病图片。训练出的AI对深色皮肤患者的诊断准确率会怎样？',
+    biasedText:'对深色皮肤患者识别准确率仅 <b style="color:#E74C3C;">34%</b>',
+    fairText:'对深色皮肤患者识别准确率提升至 <b style="color:#27AE60;">89%</b>',
+    biasedBtn:'使用有偏见数据', fairBtn:'加入多样化数据' },
+  { id:'hiring', icon:'💼', title:'招聘偏见',
+    desc:'历史招聘数据中，技术岗简历90%为男性。AI招聘系统会如何评价不同性别的简历？',
+    biasedText:'AI给女性简历评分 <b style="color:#E74C3C;">65分</b>，男性 <b>90分</b>',
+    fairText:'评分公平：男女均为 <b style="color:#27AE60;">88分</b>',
+    biasedBtn:'使用有偏见数据', fairBtn:'加入多样化数据' },
+  { id:'recommend', icon:'📱', title:'内容推荐同质化',
+    desc:'推荐算法只根据你点击过的猫视频不断推荐猫视频，你的信息视野会如何变化？',
+    biasedText:'系统 <b style="color:#E74C3C;">永远不会推荐</b> 狗视频给你',
+    fairText:'推荐中出现 <b style="color:#27AE60;">30%</b> 的狗视频',
+    biasedBtn:'只看猫视频', fairBtn:'加入多样化反馈' }
+];
+
+function renderBiasDetector() {
+  var container = document.getElementById('bias-detector-container');
+  if (!container || container.children.length > 0) return;
+  var html = '';
+  for (var i = 0; i < BIAS_SCENARIOS.length; i++) {
+    var s = BIAS_SCENARIOS[i];
+    html += '<div class="bias-scenario-card">';
+    html += '<div class="bias-scenario-header"><span class="bias-scenario-icon">' + s.icon + '</span>' + s.title + '</div>';
+    html += '<p class="bias-scenario-desc">' + s.desc + '</p>';
+    html += '<div class="bias-scenario-btns">';
+    html += '<button class="bias-btn train" onclick="checkBiasScenario(\'' + s.id + '\',\'biased\')">' + s.biasedBtn + '</button>';
+    html += '<button class="bias-btn train" onclick="checkBiasScenario(\'' + s.id + '\',\'fair\')" style="background:#27AE60;">' + s.fairBtn + '</button>';
+    html += '</div>';
+    html += '<div class="bias-scenario-result" id="bias-result-' + s.id + '"></div>';
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function checkBiasScenario(id, choice) {
+  var el = document.getElementById('bias-result-' + id);
+  if (!el) return;
+  var s;
+  for (var i = 0; i < BIAS_SCENARIOS.length; i++) {
+    if (BIAS_SCENARIOS[i].id === id) { s = BIAS_SCENARIOS[i]; break; }
+  }
+  if (!s) return;
+  el.className = 'bias-scenario-result ' + choice;
+  el.innerHTML = choice === 'biased' ? s.biasedText : s.fairText;
+  el.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════
+//  模块：AI时光机·趋势预测
+// ═══════════════════════════════════════════════════════
+
+var timeHistory = {
+  comfort: [3, 5, 2, 7, 4, 8, 6],
+  visitors: [120, 280, 95, 410, 200, 480, 350]
+};
+
+function initTimeMachine() {
+  var canvas = document.getElementById('regression-canvas');
+  if (!canvas) return;
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = 280;
+  drawRegressionChart(5);
+}
+
+function predictVisitors() {
+  var x = parseFloat(document.getElementById('comfort-slider').value);
+  document.getElementById('comfort-display').textContent = x;
+
+  var n = 7;
+  var sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  for (var i = 0; i < n; i++) {
+    sumX += timeHistory.comfort[i];
+    sumY += timeHistory.visitors[i];
+    sumXY += timeHistory.comfort[i] * timeHistory.visitors[i];
+    sumX2 += timeHistory.comfort[i] * timeHistory.comfort[i];
+  }
+  var a = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  var b = (sumY - a * sumX) / n;
+  var predicted = Math.round(a * x + b);
+  if (predicted < 0) predicted = 0;
+
+  var comment;
+  if (predicted < 150) comment = '人少，适合安静散步🌿';
+  else if (predicted <= 350) comment = '人数适中，体验不错🙂';
+  else comment = '人多，早点去占位子🏃';
+
+  document.getElementById('regression-result').innerHTML = '📈 线性回归预测：<strong style="font-size:22px;">' + predicted + '</strong> 人<br>' + comment;
+  drawRegressionChart(x);
+}
+
+function drawRegressionChart(predictX) {
+  var canvas = document.getElementById('regression-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  var pad = { top: 30, right: 30, bottom: 40, left: 50 };
+  var pw = w - pad.left - pad.right;
+  var ph = h - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // 坐标轴
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top);
+  ctx.lineTo(pad.left, h - pad.bottom);
+  ctx.lineTo(w - pad.right, h - pad.bottom);
+  ctx.strokeStyle = '#ccc';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // 标签
+  ctx.fillStyle = '#666';
+  ctx.font = '12px "Microsoft YaHei"';
+  ctx.textAlign = 'center';
+  ctx.fillText('天气舒适度', w / 2, h - 5);
+  ctx.save();
+  ctx.translate(12, h / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('游客人数', 0, 0);
+  ctx.restore();
+
+  // 散点
+  var maxX = 10, maxY = 500;
+  for (var i = 0; i < timeHistory.comfort.length; i++) {
+    var sx = pad.left + (timeHistory.comfort[i] / maxX) * pw;
+    var sy = h - pad.bottom - (timeHistory.visitors[i] / maxY) * ph;
+    // 光晕
+    var grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 10);
+    grad.addColorStop(0, '#2B579A');
+    grad.addColorStop(1, 'rgba(43,87,154,0)');
+    ctx.beginPath();
+    ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // 核心
+    ctx.beginPath();
+    ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#2B579A';
+    ctx.fill();
+  }
+
+  // 回归线（最小二乘法）
+  var n = 7;
+  var sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  for (var j = 0; j < n; j++) {
+    sumX += timeHistory.comfort[j];
+    sumY += timeHistory.visitors[j];
+    sumXY += timeHistory.comfort[j] * timeHistory.visitors[j];
+    sumX2 += timeHistory.comfort[j] * timeHistory.comfort[j];
+  }
+  var a = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  var b = (sumY - a * sumX) / n;
+  var x0 = 0, y0 = a * x0 + b;
+  var x10 = 10, y10 = a * x10 + b;
+  var lx0 = pad.left + (x0 / maxX) * pw;
+  var ly0 = h - pad.bottom - (Math.max(0, y0) / maxY) * ph;
+  var lx10 = pad.left + (x10 / maxX) * pw;
+  var ly10 = h - pad.bottom - (Math.min(maxY, y10) / maxY) * ph;
+  ctx.beginPath();
+  ctx.moveTo(lx0, ly0);
+  ctx.lineTo(lx10, ly10);
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = '#7B2CBF';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 预测点
+  var predicted = Math.round(a * predictX + b);
+  var px = pad.left + (predictX / maxX) * pw;
+  var py = h - pad.bottom - (Math.min(maxY, predicted) / maxY) * ph;
+  var pgrad = ctx.createRadialGradient(px, py, 0, px, py, 14);
+  pgrad.addColorStop(0, '#F2994A');
+  pgrad.addColorStop(1, 'rgba(242,153,74,0)');
+  ctx.beginPath();
+  ctx.arc(px, py, 14, 0, Math.PI * 2);
+  ctx.fillStyle = pgrad;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(px, py, 7, 0, Math.PI * 2);
+  ctx.fillStyle = '#F2994A';
+  ctx.fill();
+  ctx.fillStyle = '#333';
+  ctx.font = 'bold 12px "Microsoft YaHei"';
+  ctx.textAlign = 'left';
+  ctx.fillText('预测 ' + predicted + '人', px + 12, py - 6);
+
+  // 十字虚线
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(px, pad.top); ctx.lineTo(px, h - pad.bottom);
+  ctx.moveTo(pad.left, py); ctx.lineTo(w - pad.right, py);
+  ctx.strokeStyle = 'rgba(242,153,74,0.5)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ═══════════════════════════════════════════════════════
+//  模块：AI创作画廊
+// ═══════════════════════════════════════════════════════
+
+var GALLERY_KEY = 'ai-journey-gallery';
+var LAB_MAP = { qa:'AI问答实验', poem:'AI写诗工坊', classify:'AI图像识别', game:'小游戏工坊', life:'生活AI助手' };
+var LAB_ICON = { qa:'💬', poem:'✍️', classify:'🖼️', game:'🎮', life:'💡' };
+
+function saveToGallery(labId, question, reply) {
+  var items = getGalleryItems();
+  items.unshift({
+    labId: labId,
+    labName: LAB_MAP[labId] || labId,
+    labIcon: LAB_ICON[labId] || '🤖',
+    question: question,
+    reply: reply,
+    likes: 0,
+    savedAt: new Date().toISOString()
+  });
+  if (items.length > 50) items.pop();
+  try {
+    localStorage.setItem(GALLERY_KEY, JSON.stringify(items));
+  } catch (e) {
+    console.warn('画廊保存失败:', e);
+  }
+}
+
+function getGalleryItems() {
+  try {
+    var raw = localStorage.getItem(GALLERY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function ensureGalleryPresets() {
+  var items = getGalleryItems();
+  if (items.length > 0) return;
+  var now = Date.now();
+  items.push({ labId:'poem', labName:'AI写诗工坊', labIcon:'✍️', question:'帮我写一首关于星星的诗', reply:'夜空中的星星眨着眼，像散落在黑丝绒上的钻石。它们不说话，却诉说着亿万年的故事。', likes:3, savedAt: new Date(now - 86400000 * 3).toISOString() });
+  items.push({ labId:'classify', labName:'AI图像识别', labIcon:'🖼️', question:'描述一只橘猫的特征', reply:'这是一只典型的橘猫，毛色橘黄带深色条纹，圆脸琥珀眼，体型中等偏大。有趣的是，约80%的橘猫是雄性！', likes:5, savedAt: new Date(now - 86400000 * 2).toISOString() });
+  items.push({ labId:'qa', labName:'AI问答实验', labIcon:'💬', question:'AI是怎么学会认猫的？', reply:'AI学会认猫就像教小朋友认动物：收集大量猫图片→标注→训练→直到能准确认出。关键是数据量！', likes:7, savedAt: new Date(now - 86400000).toISOString() });
+  localStorage.setItem(GALLERY_KEY, JSON.stringify(items));
+}
+
+function truncateText(text, maxLen) {
+  if (text.length <= maxLen) return text;
+  return text.substring(0, maxLen) + '...';
+}
+
+function renderGallery() {
+  var container = document.getElementById('gallery-container');
+  if (!container) return;
+  var items = getGalleryItems();
+  if (items.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#999;padding:24px;">🎨 去第三站AI实验室试试吧~<br>你的创作会自动出现在这里！</p>';
+    return;
+  }
+  items.sort(function (a, b) { return new Date(b.savedAt) - new Date(a.savedAt); });
+  var html = '<div class="gallery-grid">';
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var time = new Date(item.savedAt);
+    var timeStr = (time.getMonth() + 1) + '月' + time.getDate() + '日 ' + time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0');
+    html += '<div class="gallery-card">';
+    html += '<div class="gallery-card-header">';
+    html += '<span class="gallery-lab-icon">' + item.labIcon + '</span>';
+    html += '<span class="gallery-lab-name">' + item.labName + '</span>';
+    html += '<span class="gallery-time">' + timeStr + '</span>';
+    html += '</div>';
+    html += '<div class="gallery-card-body">';
+    html += '<p class="gallery-question">' + truncateText(item.question, 50) + '</p>';
+    html += '<p class="gallery-reply">' + truncateText(item.reply, 100) + '</p>';
+    html += '</div>';
+    html += '<div class="gallery-card-footer">';
+    html += '<button class="gallery-like-btn" onclick="likeGalleryItem(' + i + ')">❤️ ' + (item.likes || 0) + '</button>';
+    html += '<button class="gallery-delete-btn" onclick="deleteGalleryItem(' + i + ')">🗑️ 删除</button>';
+    html += '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function likeGalleryItem(index) {
+  var items = getGalleryItems();
+  if (index >= 0 && index < items.length) {
+    items[index].likes = (items[index].likes || 0) + 1;
+    localStorage.setItem(GALLERY_KEY, JSON.stringify(items));
+    renderGallery();
+  }
+}
+
+function deleteGalleryItem(index) {
+  if (!confirm('确定要删除这个作品吗？')) return;
+  var items = getGalleryItems();
+  if (index >= 0 && index < items.length) {
+    items.splice(index, 1);
+    localStorage.setItem(GALLERY_KEY, JSON.stringify(items));
+    renderGallery();
+  }
+}

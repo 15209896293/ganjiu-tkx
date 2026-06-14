@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据饲养手册</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#F9FBFC; overflow:hidden; font-family:'Inter','Noto Sans SC',-apple-system,sans-serif; }
+canvas { display:block; }
+#css2d-container { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+
+.ai-card {
+  width:75px; height:75px;
+  background:#FFFFFF;
+  border-radius:14px;
+  border-top:4px solid var(--card-color);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:4px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.06);
+  pointer-events:none;
+  opacity:0;
+}
+.ai-card .emoji { font-size:24px; }
+.ai-card .name { font-size:10px; font-weight:600; color:#333; }
+
+.bottom-text {
+  position:fixed; bottom:8vh; left:50%;
+  transform:translate(-50%,20px);
+  text-align:center; z-index:10;
+  opacity:0; transition:opacity 1s ease,transform 1s ease;
+  pointer-events:none;
+}
+.bottom-text.visible { opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+.main-title { font-size:2.8rem; font-weight:800; color:#1A1A2E; margin-bottom:8px; letter-spacing:2px; }
+.sub-title { font-size:1.1rem; color:#8899AA; margin-bottom:24px; font-weight:400; }
+.explore-btn {
+  padding:14px 48px;
+  background:linear-gradient(135deg,#4A90E2,#7B2CBF);
+  color:#fff; border:none; border-radius:30px;
+  font-size:1rem; font-weight:600; letter-spacing:1px;
+  cursor:pointer;
+  box-shadow:0 4px 24px rgba(74,144,226,0.3);
+  transition:all 0.3s ease;
+  opacity:0; pointer-events:none;
+  font-family:inherit;
+}
+.explore-btn.show { opacity:1; pointer-events:auto; }
+.explore-btn:hover { transform:translateY(-3px); box-shadow:0 8px 36px rgba(74,144,226,0.45); }
+
+@media (max-width:768px) {
+  .main-title { font-size:1.8rem; }
+  .sub-title { font-size:0.95rem; }
+  .explore-btn { padding:12px 36px; font-size:0.9rem; }
+  .ai-card { width:60px; height:60px; border-radius:10px; }
+  .ai-card .emoji { font-size:18px; }
+  .ai-card .name { font-size:8px; }
+}
+</style>
+</head>
+<body>
+
+<div id="css2d-container"></div>
+
+<div class="bottom-text" id="bottom-text">
+  <h1 class="main-title">数据饲养手册</h1>
+  <p class="sub-title">从投喂到驯化 · 你的第一个智能体</p>
+  <button class="explore-btn" id="explore-btn">启程探索</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+/* ═══════════════════════════════════════════════
+   CONFIG
+   ═══════════════════════════════════════════════ */
+var IS_MOBILE = window.innerWidth < 768;
+var CONFIG = {
+  earthRadius: 4.5,
+  fibonacciN: IS_MOBILE ? 900 : 1800,
+  cityCount: IS_MOBILE ? 5 : 8,
+  gatherDuration: 2.5,
+  orbitStart: 2.5,
+  scatterStart: 8.0,
+  titleShow: 5.0,
+  buttonShow: 6.2
+};
+
+/* ═══════════════════════════════════════════════
+   1. 场景搭建
+   ═══════════════════════════════════════════════ */
+var scene = new THREE.Scene();
+scene.background = new THREE.Color('#F9FBFC');
+
+var camera = new THREE.PerspectiveCamera(IS_MOBILE ? 65 : 55, window.innerWidth/window.innerHeight, 0.5, 50);
+camera.position.set(0, 1.5, 13);
+camera.lookAt(0, 0, 0);
+
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+var css2dRenderer = new CSS2DRenderer();
+css2dRenderer.setSize(window.innerWidth, window.innerHeight);
+css2dRenderer.domElement.style.position = 'fixed';
+css2dRenderer.domElement.style.top = '0';
+css2dRenderer.domElement.style.pointerEvents = 'none';
+document.getElementById('css2d-container').appendChild(css2dRenderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+/* ═══════════════════════════════════════════════
+   2. 点阵地球
+   ═══════════════════════════════════════════════ */
+var earthGroup = new THREE.Group();
+earthGroup.rotation.x = 0.1;
+scene.add(earthGroup);
+
+// 内球（半透明蓝色）
+var innerGlobe = new THREE.Mesh(
+  new THREE.SphereGeometry(CONFIG.earthRadius * 0.97, 64, 64),
+  new THREE.MeshBasicMaterial({ color: '#EBF8FF', transparent: true, opacity: 0.15 })
+);
+earthGroup.add(innerGlobe);
+
+// 大陆区域定义
+var continents = [
+  { name:'北美', lat:[15,72], lng:[-170,-50] },
+  { name:'南美', lat:[-55,12], lng:[-82,-34] },
+  { name:'欧洲', lat:[36,71], lng:[-10,40] },
+  { name:'亚洲', lat:[10,75], lng:[40,180] },
+  { name:'非洲', lat:[-35,37], lng:[-17,52] },
+  { name:'澳洲', lat:[-40,-10], lng:[113,155] },
+  { name:'南极洲', lat:[-90,-65], lng:[-180,180] }
+];
+
+function isOnContinent(lat, lng) {
+  for (var i = 0; i < continents.length; i++) {
+    var c = continents[i];
+    if (lat >= c.lat[0] && lat <= c.lat[1] && lng >= c.lng[0] && lng <= c.lng[1]) return true;
+  }
+  return false;
+}
+
+// 斐波那契球面分布 → 大陆过滤
+var landPoints = [];
+var phi = Math.PI * (3 - Math.sqrt(5));
+var N = CONFIG.fibonacciN;
+for (var i = 0; i < N; i++) {
+  var y = 1 - (i / (N - 1)) * 2;
+  var radius = Math.sqrt(1 - y * y);
+  var theta = phi * i;
+  var x = Math.cos(theta) * radius;
+  var z = Math.sin(theta) * radius;
+  var lat = Math.asin(y) * 180 / Math.PI;
+  var lng = Math.atan2(z, x) * 180 / Math.PI;
+  if (isOnContinent(lat, lng)) {
+    landPoints.push(x * CONFIG.earthRadius, y * CONFIG.earthRadius, z * CONFIG.earthRadius);
+  }
+}
+
+// 点阵纹理
+function createDotTexture() {
+  var c = document.createElement('canvas');
+  c.width = 32; c.height = 32;
+  var ctx = c.getContext('2d');
+  var g = ctx.createRadialGradient(16,16,0,16,16,16);
+  g.addColorStop(0, 'rgba(74,144,226,1)');
+  g.addColorStop(0.3, 'rgba(74,144,226,0.6)');
+  g.addColorStop(1, 'rgba(74,144,226,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,32,32);
+  return new THREE.CanvasTexture(c);
+}
+
+var landGeo = new THREE.BufferGeometry();
+landGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(landPoints), 3));
+var landMat = new THREE.PointsMaterial({ color: '#4A90E2', size: 0.08, map: createDotTexture(), transparent: true, opacity: 0.7 });
+var landDots = new THREE.Points(landGeo, landMat);
+earthGroup.add(landDots);
+
+/* ═══════════════════════════════════════════════
+   3. 城市亮点 + 数据流
+   ═══════════════════════════════════════════════ */
+var cityPositions = [];
+var cityMeshes = [];
+var flowLines = [];
+var flowParticles = [];
+
+// 随机选8个陆地粒子作为城市
+var lpCount = landPoints.length / 3;
+var cityIndices = [];
+while (cityIndices.length < CONFIG.cityCount) {
+  var ci = Math.floor(Math.random() * lpCount);
+  if (cityIndices.indexOf(ci) === -1) cityIndices.push(ci);
+}
+
+for (var c = 0; c < cityIndices.length; c++) {
+  var idx = cityIndices[c] * 3;
+  var cp = new THREE.Vector3(landPoints[idx], landPoints[idx + 1], landPoints[idx + 2]);
+  cityPositions.push(cp);
+
+  // 城市小球
+  var dotGeo = new THREE.SphereGeometry(0.12, 16, 16);
+  var dotMat = new THREE.MeshBasicMaterial({ color: '#2B6CB0' });
+  var dot = new THREE.Mesh(dotGeo, dotMat);
+  dot.position.copy(cp);
+  earthGroup.add(dot);
+  cityMeshes.push(dot);
+
+  // 光晕
+  var glowGeo = new THREE.SphereGeometry(0.2, 16, 16);
+  var glowMat = new THREE.MeshBasicMaterial({ color: '#2B6CB0', transparent: true, opacity: 0.15 });
+  var glow = new THREE.Mesh(glowGeo, glowMat);
+  glow.position.copy(cp);
+  earthGroup.add(glow);
+
+  // 连线到球心
+  var lineGeo = new THREE.BufferGeometry().setFromPoints([cp, new THREE.Vector3(0, 0, 0)]);
+  var lineMat = new THREE.LineBasicMaterial({ color: '#BEE3F8', transparent: true, opacity: 0.25 });
+  var line = new THREE.Line(lineGeo, lineMat);
+  earthGroup.add(line);
+  flowLines.push({ line: line, mat: lineMat, cityPos: cp });
+
+  // 3个流动粒子
+  for (var p = 0; p < 3; p++) {
+    var pGeo = new THREE.SphereGeometry(0.05, 8, 8);
+    var pMat = new THREE.MeshBasicMaterial({ color: '#3182CE' });
+    var particle = new THREE.Mesh(pGeo, pMat);
+    particle.position.copy(cp);
+    particle.userData = { cityPos: cp, offset: p * 0.33, speed: 1.0 };
+    earthGroup.add(particle);
+    flowParticles.push(particle);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   4. AI卡片（CSS2D）
+   ═══════════════════════════════════════════════ */
+var cardData = [
+  { name:'ChatGPT', emoji:'🤖', color:'#10A37F' },
+  { name:'Claude', emoji:'🧠', color:'#D29A74' },
+  { name:'DeepSeek', emoji:'🐳', color:'#0066FF' },
+  { name:'Midjourney', emoji:'⛵', color:'#5E72E4' },
+  { name:'Runway', emoji:'🎬', color:'#F25C54' },
+  { name:'Canva', emoji:'🎨', color:'#00C4CC' },
+  { name:'医智源', emoji:'🧬', color:'#00A8CC' }
+];
+
+var cards = [];
+for (var k = 0; k < cardData.length; k++) {
+  var el = document.createElement('div');
+  el.className = 'ai-card';
+  el.style.setProperty('--card-color', cardData[k].color);
+  el.innerHTML = '<span class="emoji">' + cardData[k].emoji + '</span><span class="name">' + cardData[k].name + '</span>';
+  var obj = new CSS2DObject(el);
+  scene.add(obj);
+  cards.push({
+    object: obj,
+    baseAngle: (k / cardData.length) * Math.PI * 2,
+    phi: Math.PI * 0.25 + k * 0.15
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   5. 动画循环
+   ═══════════════════════════════════════════════ */
+var clock = new THREE.Clock();
+var elapsedTime = 0;
+var bottomShown = false;
+var buttonShown = false;
+
+function updateCards(t, phase) {
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    var radius;
+    if (phase === 'gather') {
+      var progress = Math.min(t / CONFIG.gatherDuration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      radius = 18.75 + (7.5 - 18.75) * eased;
+      card.object.element.style.opacity = progress;
+    } else if (phase === 'orbit') {
+      radius = 7.5;
+      card.object.element.style.opacity = 1;
+    } else {
+      var sp = Math.min((t - CONFIG.scatterStart) / 2.0, 1);
+      radius = 7.5 + (16.5 - 7.5) * sp;
+      card.object.element.style.opacity = Math.max(0, 1 - sp);
+    }
+
+    var theta = card.baseAngle + (phase === 'orbit' ? t * 1.2 : 0);
+    var yOffset = (phase === 'orbit') ? 0.3 * Math.sin(t * 1.5 + i * 0.9) : 0;
+
+    card.object.position.set(
+      Math.cos(theta) * radius,
+      yOffset,
+      Math.sin(theta) * radius
+    );
+  }
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  var dt = Math.min(clock.getDelta(), 0.1);
+  elapsedTime += dt;
+  var phase = elapsedTime < CONFIG.gatherDuration ? 'gather' : elapsedTime < CONFIG.scatterStart ? 'orbit' : 'scatter';
+
+  // 地球自转
+  earthGroup.rotation.y += 0.12 * dt;
+
+  // 数据流连线透明度（4秒后渐增）
+  var lineOpacity = 0.25 + Math.min(Math.max((elapsedTime - 4) / 3, 0), 1) * 0.45;
+  for (var l = 0; l < flowLines.length; l++) {
+    flowLines[l].mat.opacity = lineOpacity;
+  }
+
+  // 流动粒子
+  var particleSpeed = 1.0 + Math.min(Math.max((elapsedTime - 4) / 4, 0), 1) * 1.5;
+  for (var p = 0; p < flowParticles.length; p++) {
+    var fp = flowParticles[p];
+    var ud = fp.userData;
+    var progress = ((elapsedTime * ud.speed + ud.offset) % 1);
+    progress = progress < 0 ? progress + 1 : progress;
+    fp.position.lerpVectors(ud.cityPos, new THREE.Vector3(0, 0, 0), progress);
+  }
+
+  // 卡片
+  updateCards(elapsedTime, phase);
+
+  // 底部文字（5s）
+  if (!bottomShown && elapsedTime >= CONFIG.titleShow) {
+    bottomShown = true;
+    document.getElementById('bottom-text').classList.add('visible');
+  }
+  // 按钮（6.2s）
+  if (!buttonShown && elapsedTime >= CONFIG.buttonShow) {
+    buttonShown = true;
+    document.getElementById('explore-btn').classList.add('show');
+  }
+
+  renderer.render(scene, camera);
+  css2dRenderer.render(scene, camera);
+}
+
+/* ═══════════════════════════════════════════════
+   6. 交互 + 响应式
+   ═══════════════════════════════════════════════ */
+document.getElementById('explore-btn').addEventListener('click', function () {
+  document.body.style.transition = 'opacity 0.8s ease';
+  document.body.style.opacity = '0';
+  setTimeout(function () { window.location.href = 'index.html'; }, 800);
+});
+
+window.addEventListener('resize', function () {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  css2dRenderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* 启动 */
+animate();
+</script>
+</body>
+</html>

@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>敢救 · 急救情景训练与评估系统</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="introLayer" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:radial-gradient(ellipse at 50% 40%,#0d1220 0%,#080c14 70%);">
+<div id="bootDot"></div>
+<div id="bootBrand">敢 救</div>
+<div id="brand">敢救 · 急救情景训练与评估系统</div>
+<canvas id="ecgCanvas"></canvas>
+<div id="lightBurst"></div>
+
+<!-- 文字流：竖向排列 -->
+<div id="textFlow">
+  <div class="line" id="l1"><span class="line-time">第 1 秒</span><span class="line-num">54.4 万</span><span class="line-desc">中国每年心源性猝死人数</span></div>
+  <div class="line" id="l2"><span class="line-time">同时</span><span class="line-num">1%</span><span class="line-desc">院外心脏骤停抢救成功率</span></div>
+  <div class="line" id="l3"><span class="line-time">第 60 秒</span><span class="line-highlight">抢救成功率下降 10%</span></div>
+  <div class="line" id="l4"><span class="line-time">第 240 秒</span><span class="line-highlight">几乎无人生还</span></div>
+  <div class="line" id="l5"><span class="line-time">此刻</span><span class="line-highlight">有人倒在你面前</span></div>
+  <div class="line" id="l6"><span class="line-highlight">你，是ta<span>唯一的希望</span></span></div>
+</div>
+
+<!-- 抉择玻璃卡片 -->
+<div id="choiceCard">
+  <div class="card-question">你会成为那个出手的人吗？</div>
+  <div class="card-sub">正确的训练，能让成功率提升 3 倍</div>
+  <div class="card-btns">
+    <button class="card-btn card-btn-r" id="btnR">出手施救</button>
+    <button class="card-btn card-btn-p" id="btnP">我还不敢</button>
+  </div>
+</div>
+
+<div id="comfortOv">
+  <div class="cc">
+    <div class="cc-line"></div>
+    <div class="cc-t">每一次练习，都是在为生命争取时间。</div>
+    <div class="cc-s">敢救，让"不敢"变成"敢救"。</div>
+    <button class="cc-btn" id="ccBtn">开始训练</button>
+  </div>
+</div>
+</div>
+
+
+<!-- Loading Screen -->
+<div id="app-loading">
+  <canvas class="loading-ecg" id="loadingEcg" width="200" height="60"></canvas>
+  <p class="loading-text">敢救加载中...</p>
+</div>
+
+<!-- Dark mode toggle -->
+<button class="dark-toggle" id="darkToggle" title="切换暗色模式">🌙</button>
+
+<!-- App Container -->
+<div id="app-container">
+
+  <!-- Global Header -->
+  <header id="global-header" class="hidden">
+    <button class="header-back" id="headerBackBtn" title="退出训练">✕</button>
+    <span class="header-step" id="headerStep">第 1/12 步</span>
+    <div class="header-timer" id="headerTimer">
+      <span>⏱</span>
+      <span id="globalTimer">00:00</span>
+    </div>
+    <button id="headerGuideBtn" title="查看场景指南" style="background:none;border:none;font-size:1rem;cursor:pointer;margin-left:8px;padding:2px 4px;">📖</button>
+  </header>
+
+  <!-- Step Indicator -->
+  <nav id="step-indicator" class="hidden" aria-label="训练进度">
+    <!-- filled by JS -->
+  </nav>
+
+  <!-- Page Wrapper -->
+
+<div class="dashboard-body">
+<nav class="dashboard-sidebar" id="sidebar" role="navigation" aria-label="训练流程导航">
+<div class="sidebar-section-title">CPR训练流程</div>
+<div class="sidebar-item active" role="button" tabindex="0" data-nav="1"><span class="sidebar-item-num">🏠</span>首页</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="2"><span class="sidebar-item-num">1</span>情景引入</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="3"><span class="sidebar-item-num">2</span>环境评估</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="4"><span class="sidebar-item-num">3</span>呼救120+取AED</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="5"><span class="sidebar-item-num">4</span>判断反应与呼吸</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="6"><span class="sidebar-item-num">5</span>胸外按压</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="7"><span class="sidebar-item-num">6</span>人工呼吸</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="8"><span class="sidebar-item-num">7</span>AED操作</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="9"><span class="sidebar-item-num">8</span>循环管理</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="10"><span class="sidebar-item-num">9</span>结局判定</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="11"><span class="sidebar-item-num">10</span>诊断报告</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="12"><span class="sidebar-item-num">11</span>知识库与证书</div>
+<div class="sidebar-section-title" style="margin-top:8px;">🎯 专项训练</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="26"><span class="sidebar-item-num">⚡</span>AED专项训练</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="34"><span class="sidebar-item-num">🫁</span>气道梗阻急救</div>
+<div class="sidebar-item" role="button" tabindex="0" data-nav="43"><span class="sidebar-item-num">🩹</span>创伤急救基础</div>
+</nav>
+<main class="dashboard-main" id="mainContent">
+<div id="page-wrapper">
+
+    <!-- ===== PAGE 1: 首页 (Gemini视觉移植) ===== -->
+    <section class="page page--splash active" data-page="1">
+      <canvas class="splash-ecg-bg" id="splashEcgBg"></canvas>
+      <div class="page__inner" style="width:100%;">
+        <div class="splash-container">
+          <div class="hero-ill-zone">
+            <div class="hero-ring-glow"></div>
+            <div class="hero-ring-glow-2"></div>
+            <div class="hero-particles">
+              <div class="hero-particle"></div><div class="hero-particle"></div>
+              <div class="hero-particle"></div><div class="hero-particle"></div>
+              <div class="hero-particle"></div><div class="hero-particle"></div>
+            </div>
+            <div class="hero-cross-pulsate">❤️</div>
+          </div>
+          <div class="pill-eyebrow">
+            意向：<span>CPR · AED · 120</span> 联动仿真
+          </div>
+          <h1 class="splash-main-title">敢救</h1>
+          <p class="splash-sub-lead">急救情景训练与评估系统</p>
+          <p style="font-size:0.82rem;color:var(--c-text-muted);margin-top:-6px;margin-bottom:20px;line-height:1.7;text-align:center;">不是为了训练你成为专业急救员，而是希望通过训练记住几个关键知识点，在真正遇到紧急情况时——<br><span style="color:var(--c-primary);font-weight:700;">多一点不旁观的勇气</span></p>
+          <div class="mini-cards-grid">
+            <div class="mini-card-item"><div class="mini-card-icon">📋</div><div class="mini-card-title">12 步训练</div><div class="mini-card-desc">标准急救链</div></div>
+            <div class="mini-card-item"><div class="mini-card-icon">📊</div><div class="mini-card-title">6 维评估</div><div class="mini-card-desc">能力深度复盘</div></div>
+            <div class="mini-card-item"><div class="mini-card-icon">⚠️</div><div class="mini-card-title">7 处检测</div><div class="mini-card-desc">错误风险回放</div></div>
+          </div>
+          <button class="btn btn--primary btn--lg btn--block" id="startBtn" onclick="window._startTraining()">敢救一次</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:8px;margin-bottom:16px;">
+            <button class="btn btn--secondary btn--sm" id="scienceBtn2">📚 科学依据</button>
+            <button class="btn btn--secondary btn--sm" id="knowledgeBtn2">📖 知识库</button>
+          </div>
+          <button class="btn btn--secondary btn--sm btn--block" id="videoBtn" style="margin-bottom:8px;">📺 观看急救教学视频</button>
+          <div class="bottom-disclaimer-strip" id="splashDisclaimer">
+            ⚠️ 本作品为数字化科普情景互动训练，不能替代线下急救培训或专业医疗判断。真实紧急情况请立即拨打 120，并听从调度员和现场专业人员指导。
+          </div>
+          <p class="splash-score" id="bestScoreDisplay" style="margin-top:12px;">历史最佳：<strong>--</strong> 分</p>
+          <!-- 震动开关保持 -->
+          <label class="vib-toggle" id="vibToggleHome" style="margin-top:8px;">
+            <input type="checkbox" id="vibrationToggle" checked> 📳 震动反馈
+          </label>
+          <!-- 模块卡片区保留原有id和行为 -->
+          <p style="text-align:center;font-size:0.8rem;color:var(--c-text-secondary);margin:0 0 4px 0;">👇 推荐从这里开始完整训练</p>
+          <div class="hub-section-title">📋 主训练模块</div>
+          <div class="module-grid">
+            <div class="module-card" onclick="window._startTraining()">
+              <div class="card-icon cpr">❤️</div><div class="card-body"><div class="card-title">CPR + AED 情景训练</div><div class="card-desc">随机场景→现场安全→呼救120→判断呼吸→胸外按压→AED→30:2循环→智能训练报告</div></div><div class="card-badge ready">敢救一次</div>
+            </div>
+          </div>
+          <div class="hub-section-title">📖 拓展学习 / 知识卡片</div>
+          <div class="module-grid">
+            <div class="module-card" onclick="window._startAed()">
+              <div class="card-icon aed">⚡</div><div class="card-body"><div class="card-title">AED 专项训练</div><div class="card-desc">开机→贴片→分析→电击 四步实操训练</div></div><div class="card-badge ready">敢救一次</div>
+            </div>
+            <div class="module-card" onclick="window._startChoke()">
+              <div class="card-icon choke">🫁</div><div class="card-body"><div class="card-title">气道梗阻急救</div><div class="card-desc">海姆立克法：成人·孕妇·婴儿·自救 实操训练</div></div><div class="card-badge ready">敢救一次</div>
+            </div>
+            <div class="module-card" onclick="window._startTrauma()">
+              <div class="card-icon trauma">🩹</div><div class="card-body"><div class="card-title">创伤急救基础</div><div class="card-desc">止血·包扎·固定·搬运 四项技术实操训练</div></div><div class="card-badge ready">敢救一次</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 2: 情景引入 (Gemini视觉移植) ===== -->
+    <section class="page" data-page="2">
+      <div class="page__inner">
+        <!-- 保持原有id：sceneArt, sceneNarrative, sceneStartBtn -->
+        <div class="scenario-card-premium">
+          <div class="scene-visual-container" id="sceneArt">
+            <img src="" class="scene-photo" id="scenePhoto" alt="场景加载中" style="display:none;">
+          </div>
+          <div class="danger-warning-strip" id="dangerStrip" style="display:none;">
+            🚨 现场高危风险阻断提示
+          </div>
+        </div>
+        <div class="scene-narrative" id="sceneNarrative"></div>
+        <button class="btn btn--primary btn--lg btn--block" id="sceneStartBtn" onclick="window._goTo(3)">立即行动</button>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 3: 环境评估 ===== -->
+    <section class="page" data-page="3">
+      <div class="page__inner">
+        <!-- Scene illustration -->
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:0;min-height:140px;">
+          <div id="envScene" style="height:140px;position:relative;overflow:hidden;background:#f5f7fa;">
+            <img src="" alt="" class="env-photo" id="envPhoto" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;display:none;">
+          </div>
+          <div style="padding:10px 16px;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.6);border-top:1px solid rgba(0,0,0,0.04);">
+            <span style="font-size:1.5rem;" id="envSceneIcon">🚨</span>
+            <div>
+              <strong style="font-size:0.85rem;">紧急情况</strong>
+              <p style="font-size:0.7rem;color:var(--c-text-secondary);margin:0;line-height:1.3;" id="envContextText"></p>
+            </div>
+          </div>
+        </div>
+        <!-- Quiz - separated with clear gap -->
+        <div class="card" style="margin-top:12px;">
+          <p style="font-size:0.72rem;color:var(--c-text-muted);text-align:center;margin:0 0 6px;">敢救，也要先保护自己。</p><h2 class="quiz-question" id="envQuestion" style="font-size:1rem;"></h2>
+          <p style="font-size:0.7rem;color:var(--c-text-secondary);margin-bottom:8px;">请选择最正确的做法（单选）</p>
+          <div id="envOptions"></div>
+          <div class="quiz-feedback" id="envFeedback"></div>
+          <button class="btn btn--primary btn--block mt-md" id="envNextBtn" style="display:none;">✅ 继续下一步</button>
+        </div>
+        <div class="knowledge-card" id="kcP3">
+          <div class="kc-icon">🛡️</div>
+          <div class="kc-title">知识点：环境安全第一原则</div>
+          <div class="kc-body">急救的首要原则是<strong>确保施救者自身安全</strong>。必须先观察现场有无危险（车辆、电线、火源、毒气等），确认安全后再接近患者。触电现场必须先切断电源——进入带电环境会让你也变成受害者。</div>
+          <div class="kc-source">📚 来源：《2020 AHA 心肺复苏指南》</div>
+          <button class="btn btn--primary btn--block btn--sm" onclick="window._completeEnv()">记住了，继续</button>
+        </div>
+        <!-- Risk Replay Card -->
+        <div class="risk-replay-card" id="riskReplayP3"></div>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 4: 呼救与AED (对话式) ===== -->
+    <section class="page" data-page="4">
+      <div class="page__inner">
+        <p style="font-size:0.72rem;color:var(--c-text-muted);text-align:center;margin:0 0 4px;">一个人不必完成所有事。敢救的第一步，是大声呼救并让更多人参与。</p>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="width:10px;height:10px;border-radius:50%;background:var(--c-success);animation:pulse 1.5s infinite;"></span>
+            <strong style="font-size:0.95rem;">📞 120 急救中心 · 通话中</strong>
+            <span class="call-timer" id="callTimer" style="margin-left:auto;font-size:0.8rem;color:var(--c-text-secondary);">00:00</span>
+          </div>
+          <div class="call-chat" id="callChat">
+            <div class="chat-bubble dispatcher">
+              <div class="bubble-avatar">🏥</div>
+              <div class="bubble-body">您好，这里是120急救中心。<br>请告诉我发生了什么？</div>
+            </div>
+          </div>
+          <div class="call-options" id="callOptions"></div>
+        </div>
+        <div class="quiz-feedback" id="callFeedback"></div>
+        <div class="card text-center" id="aedWaitCard" style="display:none;">
+          <p class="text-muted mb-md">✅ 120已派出救护车！<br>请让附近人帮忙取AED...</p>
+          <div class="aed-timer" id="aedTimer">8</div>
+          <p class="text-muted" style="font-size:12px;">秒后 AED 到达<br><span style="font-size:0.65rem;">救护车已出发，现在就可以开始胸外按压，不要干等。</span></p>
+          <button class="btn btn--ghost btn--sm mt-md" onclick="window._cprSkipAedWait()">跳过等待</button>
+        </div>
+        <div class="card text-center" id="aedArrived" style="display:none;">
+          <div class="aed-icon-placeholder">⚡</div>
+          <p class="mt-md" style="font-weight:700;">AED 已到达！</p>
+          <button class="btn btn--primary btn--block mt-md" onclick="window._cprGoToPage5()">进入下一步</button>
+        </div>
+        <div class="risk-replay-card" id="riskReplayP4"></div>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 5: 判断反应与呼吸 (Breath Check Trainer) ===== -->
+    <section class="page" data-page="5">
+      <div class="page__inner" style="gap:10px;">
+        <div class="bc-header"><p style="font-size:0.7rem;color:var(--c-text-muted);margin:0 0 4px;">记住这 10 秒：轻拍重唤，观察胸廓起伏，判断是否需要立即开始 CPR。</p><h3 class="bc-title">🩺 判断反应与呼吸</h3><p class="bc-desc">轻拍双肩并大声呼喊，随后观察胸廓起伏，判断时间不超过 10 秒。</p></div>
+        <div class="bc-timer-row"><span class="bc-timer-icon">⏱</span><span class="bc-timer-num" id="bcTimer">10</span><span class="bc-timer-label">秒</span><div class="bc-timer-bar"><div class="bc-timer-fill" id="bcTimerFill"></div></div></div>
+        <div class="bc-steps">
+          <button class="bc-step-card" id="bcStep1" aria-label="步骤1：轻拍患者双肩检查反应"><span class="bc-step-num">1</span><span class="bc-step-icon">🫱</span><span class="bc-step-text">轻拍双肩</span><span class="bc-step-status" id="bcStatus1">待操作</span></button>
+          <button class="bc-step-card" id="bcStep2" aria-label="步骤2：大声呼喊患者确认意识"><span class="bc-step-num">2</span><span class="bc-step-icon">📢</span><span class="bc-step-text">大声呼喊</span><span class="bc-step-status" id="bcStatus2">待操作</span></button>
+          <button class="bc-step-card" id="bcStep3" aria-label="步骤3：观察胸廓起伏10秒判断呼吸"><span class="bc-step-num">3</span><span class="bc-step-icon">👀</span><span class="bc-step-text">观察呼吸10秒</span><span class="bc-step-status" id="bcStatus3">待操作</span></button>
+        </div>
+        <div class="bc-shout-bubble" id="bcShoutBubble"><span>🗣️ 你还好吗？能听到我吗？</span></div>
+        <div class="bc-feedback" id="bcFeedback" aria-live="polite"><p>👆 点击 <strong>"轻拍双肩"</strong> 开始检查患者反应</p></div>
+        <div class="bc-observe-countdown" id="bcObserveCountdown" style="display:none;"><span class="bc-observe-icon">👀</span><div class="bc-observe-body" id="bcObserveBody"><div class="bc-body-head"></div><div class="bc-body-torso"><div class="bc-body-chest" id="bcBodyChest"></div></div></div><span class="bc-observe-text" id="bcObserveText">观察胸廓是否有起伏...</span><span class="bc-observe-timer" id="bcObserveTimer">10</span></div>
+        <button id="bcSkipObserve" style="display:none;width:100%;background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 20px;font-size:1rem;cursor:pointer;font-family:var(--font);margin-top:6px;">⏩ 加速（教学中建议完整观察10秒）</button>
+        <div class="bc-verdict" id="bcVerdict" style="display:none;">
+          <p style="font-weight:700;margin-bottom:8px;">根据你的观察，请判断：</p>
+          <button class="btn btn--danger btn--block bc-verdict-btn" data-verdict="noBreath">❌ 无反应，无正常呼吸</button>
+          <button class="btn btn--secondary btn--block bc-verdict-btn" data-verdict="hasReaction" style="margin-top:6px;">🔄 有反应</button>
+          <button class="btn btn--secondary btn--block bc-verdict-btn" data-verdict="hasBreath" style="margin-top:6px;">🫁 有正常呼吸</button>
+          <button class="btn btn--secondary btn--block bc-verdict-btn" data-verdict="unsure" style="margin-top:6px;">❓ 不确定</button>
+        </div>
+        
+        <div class="cpr-disclaimer">⚠️ 呼吸判断应在不超过20秒内完成，避免延误胸外按压。</div>
+        <div class="knowledge-card" id="kcP5"><div class="kc-icon">🩺</div><div class="kc-title">知识点：10秒快速判断法</div><div class="kc-body"><strong>非专业人员只需看胸廓起伏</strong>即可判断呼吸。判断要在<strong>10秒内</strong>完成。如果患者无反应+无呼吸或仅有濒死喘息，立即开始<strong>CPR</strong>。</div><div class="kc-source">📚 来源：《2020 AHA 心肺复苏指南》成人BLS流程</div><button class="btn btn--primary btn--block btn--sm" onclick="window.showCompressionReady()">记住了，进入胸外按压</button></div>
+        <div class="risk-replay-card" id="riskReplayP5"></div>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 6: 胸外按压 (CPR Compression Trainer) ===== -->
+    <section class="page" data-page="6">
+      <div class="page__inner press-layout">
+        <div class="card--ecg press-ecg"><canvas id="ecgCanvas6"></canvas><div class="ecg-overlay"><span>LEAD II</span><span id="ecgBpm6">-- BPM</span><span class="patient-face-indicator" id="patientFace">😐</span></div></div>
+        <p style="font-size:0.72rem;font-weight:700;text-align:center;margin:0;line-height:1.3;color:var(--c-text-secondary);">🎯 按压30次 · 深度5-6cm · 频率100-120次/分 · 胸廓完全回弹 ｜ <span id="difficultyLabel">准备开始</span></p>
+        <p style="font-size:0.6rem;color:var(--c-text-muted);text-align:center;margin:0 0 2px;line-height:1.3;">💡 按住光圈≈深度 · 跟随脉冲≈频率 · ⌨空格或点击  <button class="btn btn--ghost btn--sm" id="soundToggleBtn" style="font-size:0.55rem;padding:1px 6px;min-height:20px;" title="开关节拍声音">🔊</button></p>
+        <!-- 🎵 节奏教练 -->
+        <div class="rhythm-coach-bar" id="rhythmCoachBar">
+          <div class="rhythm-coach-icon">🎵</div>
+          <div class="rhythm-coach-text">
+            <div class="rhythm-coach-title">🎵 跟着《甜蜜蜜》的节拍按压</div>
+            <div class="rhythm-coach-sub">103 BPM = <strong>《甜蜜蜜》副歌</strong>节奏速度 | 🎓 同《Stayin' Alive》全球CPR培训通用BPM</div>
+          </div>
+          <div class="rhythm-beat-dots" id="rhythmBeatDots">
+            <div class="rhythm-beat-dot downbeat"></div><div class="rhythm-beat-dot"></div><div class="rhythm-beat-dot"></div><div class="rhythm-beat-dot"></div>
+          </div>
+          <div class="rhythm-coach-bpm" id="rhythmCoachBpm">103<span>BPM</span></div>
+        </div>
+        <p id="pressFeedback" style="font-size:0.78rem;font-weight:800;min-height:18px;text-align:center;color:var(--c-text-secondary);margin:0;line-height:1.2;"></p>
+        <div class="cpr-illustration-card" id="cprIllustrationCard">
+          <div class="cpr-illustration-frame">
+            <img src="data:image/webp;base64,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" alt="CPR胸外按压医学插画" class="cpr-scene-image" id="cprSceneImg" onerror="this.style.display='none';var ph=document.getElementById('cprPlaceholder');if(ph){ph.classList.add('show');ph.innerHTML='<p style=color:#94a3b8>📷 医学插画（离线模式）</p><p style=font-size:0.7rem;color:#64748b>贴片位置：右上胸锁骨下 + 左侧腋前线</p>';}">
+            <div class="cpr-scene-placeholder" id="cprPlaceholder"><span class="ph-icon">🫀</span><span>医学插画加载中<br>如持续显示此提示，请检查网络或刷新页面</span></div>
+            <div class="cpr-hotspot-layer"><div class="cpr-hotspot-anchor"><div class="cpr-press-ring-wrap" id="cprHotspotGlow"><svg class="cpr-press-ring-svg" viewBox="0 0 100 100" id="cprPressRingSvg"><circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4"/><circle cx="50" cy="50" r="46" fill="none" stroke="#22c55e" stroke-width="4" stroke-dasharray="289" stroke-dashoffset="289" id="cprPressRingFill" stroke-linecap="round" transform="rotate(-90 50 50)"/></svg></div><div class="cpr-press-core" id="cprPressCore"><span class="cpr-press-hint" id="cprPressHint"></span></div><button class="cpr-hotspot-btn" id="cprHotspot" aria-label="胸外按压区域——按住约0.3秒模拟按压" role="button"></button></div></div>
+            <div class="press-particles-layer" id="pressParticles"></div>
+          </div>
+        </div>
+        <div class="cpr-depth-vertical"><div class="cpr-depth-scale"><span>0cm</span><span>3cm</span><span>4cm</span><span class="cm-ok">5cm</span><span class="cm-ok">6cm</span><span>7cm</span></div><div class="cpr-depth-bar-wrap"><div class="cpr-depth-target-zone"></div><div class="cpr-depth-indicator" id="cprDepthIndicator"></div></div></div>
+        <div class="cpr-depth-label" id="cprDepthLabel">等待首次按压</div>
+        <div class="cpr-interrupt-warn" id="cprInterruptWarn">⚠️ 按压中断过长！请立即恢复按压</div>
+        <div class="cpr-dashboard-panel">
+          <div class="cpr-dash-card"><div class="cpr-dash-val" id="cprCount">0 / 30</div><div class="cpr-dash-lbl">按压次数</div></div>
+          <div class="cpr-dash-card"><div class="cpr-dash-val" id="cprBpm">--</div><div class="cpr-dash-lbl">实时 BPM</div></div>
+          <div class="cpr-dash-card"><div class="cpr-dash-val" id="cprRate">--%</div><div class="cpr-dash-lbl">达标率</div></div>
+        </div>
+        <div class="cpr-progress-wrap"><div class="cpr-progress-bar"><div class="cpr-progress-fill" id="cprProgressFill"></div></div></div>
+        <div class="press-guide-hint" id="pressGuideHint" style="display:none;">⌨ 空格或点击光圈</div>
+        
+        <div class="cpr-disclaimer">⚠️ 本训练器为网页模拟反馈，深度数据用于教学演示，不代表真实人体按压深度，不能替代线下模拟人实操训练。</div>
+        <div class="knowledge-card" id="kcP6"><div class="kc-icon">❤️</div><div class="kc-title">知识点：高质量胸外按压</div><div class="kc-body"><strong>位置：</strong>两乳头连线中点（胸骨中下段）<br><strong>深度：</strong>5-6cm（成人）<br><strong>频率：</strong>100-120次/分钟<br><strong>关键：</strong>每次让胸廓<strong>完全回弹</strong>，中断不超过10秒。</div><div class="kc-source">📚 来源：《2020 AHA 指南》Class 1, LOE B-NR</div><button class="btn btn--primary btn--block btn--sm" onclick="window._goTo(7)">记住了，继续</button>
+          <button class="btn btn--danger btn--block btn--sm" style="margin-top:6px;" onclick="window.stopCompression();window.enterPage6();">🔄 重新练习按压</button></div>
+        <div class="risk-replay-card" id="riskReplayP6"></div>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 7: 人工呼吸 (Rescue Breath Trainer) ===== -->
+    <section class="page" data-page="7">
+      <div class="page__inner" style="gap:10px;">
+        <div class="rb-header"><h3 class="rb-title">💨 人工呼吸</h3><p class="rb-desc">完成 30 次胸外按压后，开放气道并进行 2 次有效通气。</p><p style="font-size:0.7rem;color:var(--c-text-muted);text-align:center;margin:2px 0 0;">📋 每次人工呼吸约 1 秒，以胸廓出现可见起伏为有效通气标准。敢救，是按正确步骤来，不急不躁。</p></div>
+        <div class="rb-steps"><div class="rb-step-node active" id="rbStep1"><span class="rb-step-num">1</span><span class="rb-step-label">开放气道</span></div><div class="rb-step-conn"></div><div class="rb-step-node" id="rbStep2"><span class="rb-step-num">2</span><span class="rb-step-label">捏住鼻翼</span></div><div class="rb-step-conn"></div><div class="rb-step-node" id="rbStep3"><span class="rb-step-num">3</span><span class="rb-step-label">通气①</span></div><div class="rb-step-conn"></div><div class="rb-step-node" id="rbStep4"><span class="rb-step-num">4</span><span class="rb-step-label">通气②</span></div></div>
+        <div class="rb-actions"><button class="btn rb-action-btn" id="rbBtnAirway">🤚 仰头抬颏 —— 开放气道</button><button class="btn rb-action-btn" id="rbBtnNose" style="display:none;">👌 捏住鼻翼</button></div>
+        <div class="rb-vent-card" id="rbVentCard" style="display:none;">
+          <div class="rb-lungs" id="rbLungs"><div class="rb-lung" id="rbLungL"></div><div class="rb-lung" id="rbLungR"></div></div><div class="rb-vent-header">💨 口对口通气</div><p style="font-size:0.65rem;color:var(--c-text-muted);text-align:center;margin:0 0 8px;" id="rbVentWaiting">请先完成上方「开放气道」和「捏住鼻翼」两步</p>
+          <div class="rb-vent-btns">
+            <button class="btn rb-vent-btn" id="rbVent1" aria-label="第1次通气——按住约1秒模拟吹气"><span class="rb-vent-label">第 1 次通气</span><span class="rb-vent-hint">按住 1-2 秒</span><div class="rb-vent-ring"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" fill="none" stroke="#e8edf2" stroke-width="6"/><circle cx="40" cy="40" r="36" fill="none" stroke="#22c55e" stroke-width="6" stroke-dasharray="226" stroke-dashoffset="226" id="rbVentArc1"/></svg></div></button>
+            <button class="btn rb-vent-btn" id="rbVent2" aria-label="第2次通气——按住约1秒模拟吹气"><span class="rb-vent-label">第 2 次通气</span><span class="rb-vent-hint">按住 1-2 秒</span><div class="rb-vent-ring"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" fill="none" stroke="#e8edf2" stroke-width="6"/><circle cx="40" cy="40" r="36" fill="none" stroke="#22c55e" stroke-width="6" stroke-dasharray="226" stroke-dashoffset="226" id="rbVentArc2"/></svg></div></button>
+          </div>
+          <div class="rb-vent-count" aria-live="polite">有效通气：<strong id="rbVentOkCount">0</strong> / 2</div>
+        </div>
+        <div class="rb-chest-indicator" id="rbChestIndicator" style="display:none;"><span class="rb-chest-icon">🫁</span><span class="rb-chest-text" id="rbChestText">胸廓有起伏，通气有效</span></div>
+        <div id="rbHeadIllustration" style="display:flex;align-items:center;justify-content:center;gap:16px;padding:6px 0;"><div style="position:relative;width:50px;height:70px;"><div style="width:42px;height:55px;border-radius:50%;background:#f5d0a9;border:2px solid #e8bf94;margin:0 auto;"></div><div style="width:16px;height:24px;background:#f5d0a9;border-radius:0 0 8px 8px;margin:0 auto;border:2px solid #e8bf94;border-top:none;"></div><div id="rbAirwayLine" style="position:absolute;bottom:0;left:50%;width:2px;height:18px;background:#ef4444;transform:translateX(-50%);border-radius:2px;"></div></div><div style="font-size:0.65rem;color:var(--c-text-secondary);text-align:center;line-height:1.5;"><div style="font-weight:700;">气道状态</div><div id="rbAirwayStatus" style="color:#ef4444;font-weight:800;">未开放</div></div></div><p class="rb-feedback" id="rbFeedback" aria-live="polite">👆 第一步：点击 <strong>"仰头抬颏"</strong> 开放气道</p>
+        
+        <div class="cpr-disclaimer">⚠️ 本页面为通气步骤模拟，不能替代线下实操训练。</div>
+        <div class="knowledge-card" id="kcP7"><div class="kc-icon">💨</div><div class="kc-title">知识点：人工呼吸要点</div><div class="kc-body"><strong>仰头抬颏法：</strong>一手按额头向后压，另一手两指抬下巴。<br><strong>吹气量：</strong>看到胸廓隆起即可（约500-600ml）。<br><strong>比例：</strong>按压-通气比 <strong>30:2</strong>。</div><div class="kc-source">📚 来源：《2020 AHA 指南》成人BLS</div><button class="btn btn--primary btn--block btn--sm" onclick="window._goTo(8)">记住了，进入 AED 操作</button></div>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 8: AED使用 (真实交互版) ===== -->
+    <section class="page" data-page="8">
+      <div class="page__inner">
+        <!-- 步骤指示器 -->
+        <div class="aed-step-bar">
+          <div class="aed-step-node" id="aedStepN1"><span>1</span>开机</div>
+          <div class="aed-step-conn"></div>
+          <div class="aed-step-node" id="aedStepN2"><span>2</span>贴片</div>
+          <div class="aed-step-conn"></div>
+          <div class="aed-step-node" id="aedStepN3"><span>3</span>分析</div>
+          <div class="aed-step-conn"></div>
+          <div class="aed-step-node" id="aedStepN4"><span>4</span>电击</div>
+        </div>
+        <p style="font-size:0.7rem;color:var(--c-text-muted);text-align:center;margin:4px 0 8px;">📋 AED 会一步步语音提示你。敢救不是靠蛮勇，而是学会跟随正确流程。电击时记得喊：闪开！</p>
+        <!-- AED 设备面板 -->
+        <div class="aed-device" id="aedDevice">
+          <div class="aed-lid" id="aedLid">
+            <div class="aed-lid-label">AED<br>自动体外除颤仪</div>
+            <div class="aed-lid-handle"></div>
+            <div class="aed-lid-light"></div>
+          </div>
+          <div class="aed-body-interior" id="aedBody">
+            <canvas id="aedLcdCanvas" width="260" height="130" style="width:100%;height:130px;border-radius:4px;display:none;"></canvas><div class="aed-screen" id="aedScreen">
+              <div class="aed-screen-text" id="aedMsg">等待开机...</div>
+              <div class="aed-screen-sub" id="aedSub"></div>
+              <div class="aed-battery">████████ 100%</div>
+            </div>
+            <div class="aed-power-btn-wrap">
+              <button class="aed-power-btn" id="aedPowerBtn">⚡<br>开机</button>
+            </div>
+            <div class="aed-speaker">〓〓〓〓</div>
+          </div>
+        </div>
+        <!-- 电极片包装 -->
+        <div class="aed-package" id="aedPackage">
+          <div class="aed-package-tear" id="aedTearLine">📦 点击打开电极片包装</div>
+          <div class="aed-package-content" id="aedPackageContent">
+            <div class="aed-package-pads">
+              <div class="aed-pack-pad" data-pad="1">①</div>
+              <div class="aed-pack-pad" data-pad="2">②</div>
+            </div>
+          </div>
+        </div>
+        <!-- 贴电极片区域 -->
+        <div class="card" id="aedPadPlacement" style="display:none;">
+          <p class="text-muted mb-md">从包装中取出电极片，点击放到身体对应位置</p>
+          <div class="aed-body-zone" id="aedBodyZone">
+            <div style="position:relative;width:150px;height:220px;margin:0 auto;pointer-events:none;">
+              <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:52px;height:58px;border-radius:50%;background:#f5d0a9;border:2px solid #e8bf94;"></div>
+              <div style="position:absolute;top:52px;left:50%;transform:translateX(-50%);width:22px;height:18px;background:#f5d0a9;border:2px solid #e8bf94;border-top:none;border-radius:0 0 8px 8px;"></div>
+              <div style="position:absolute;top:66px;left:50%;transform:translateX(-50%);width:80px;height:110px;background:#fdf2e9;border:2px solid #e8bf94;border-radius:16px 16px 8px 8px;"></div>
+              <div style="position:absolute;top:82px;left:36px;width:28px;height:2px;background:rgba(180,140,120,0.4);border-radius:1px;transform:rotate(-8deg);"></div>
+              <div style="position:absolute;top:82px;right:36px;width:28px;height:2px;background:rgba(180,140,120,0.4);border-radius:1px;transform:rotate(8deg);"></div>
+              <div style="position:absolute;top:100px;left:50%;transform:translateX(-50%);width:2px;height:50px;border-left:2px dashed rgba(180,140,120,0.35);"></div>
+              <div style="position:absolute;top:138px;left:50%;transform:translateX(-50%);font-size:0.48rem;color:rgba(180,140,120,0.5);">胸骨</div>
+            </div>
+            <div class="aed-target-zone zone-right-clavicle" id="zonePad1" data-pad="1">①</div>
+            <div class="aed-target-zone zone-left-axillary" id="zonePad2" data-pad="2">②</div>
+          </div>
+          <div class="aed-pads-tray">
+            <div class="aed-drag-pad" id="dragPad1" data-pad="1"><span class="pad-num">①</span> 右锁骨下</div>
+            <div class="aed-drag-pad" id="dragPad2" data-pad="2"><span class="pad-num">②</span> 左腋前线</div>
+          </div>
+          <p id="padPlaceMsg" style="font-size:0.75rem;color:var(--c-text-secondary);margin-top:4px;">拖动或点击电极片放到身体对应位置（①右锁骨下 ②左腋前线）</p>
+        </div>
+        <!-- 分析心律 -->
+        <div class="card text-center" id="aedAnalyzing" style="display:none;">
+          <p style="font-weight:700;color:var(--c-danger);">⚠️ 正在分析心律...</p>
+          <p class="text-muted">请勿触摸患者</p>
+          <div class="aed-timer" id="aedAnalyzeTimer">5</div>
+        </div>
+        
+        <div class="knowledge-card" id="kcP8">
+          <div class="kc-icon">⚡</div>
+          <div class="kc-title">知识点：AED除颤原理</div>
+          <div class="kc-body"><strong>心室颤动(VF)和无脉性室速(pVT)</strong>是心脏骤停中常见的两种<strong>可除颤心律</strong>。<br> AED通过<strong>高电压电击</strong>使所有心肌细胞同时除极化→窦房结重获主导→恢复窦性心律。<br> <strong>贴片位置：</strong>右锁骨下 + 左腋前线（前侧位）。<br> <strong>关键提示：</strong>AED 越早使用，通常越有利于提高生存机会。对于不可除颤心律（如心搏停止），AED不会建议电击，此时应立即持续CPR。</div>
+          <div class="kc-source">📚 来源：《2020 AHA 指南》+ AED厂商使用说明</div>
+          <button class="btn btn--primary btn--block btn--sm" onclick="window._goTo(9)">记住了，进入循环管理</button>
+        </div>
+        <div class="risk-replay-card" id="riskReplayP8"></div>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 9: 循环管理 ===== -->
+    <section class="page" data-page="9">
+      <div class="page__inner">
+        <div class="card text-center">
+          <h3>30:2 循环进度</h3>
+          <div class="cycle-progress mt-md">
+            <span>按压<br>30次</span>
+            <span style="font-size:1.5rem;">→</span>
+            <span>吹气<br>2次</span>
+          </div>
+          <div class="cycle-circle mt-md" id="cycleCircle">1/5</div>
+          <p class="text-muted mt-md">当前已完成 <strong id="cycleCompleted">0</strong> 轮循环</p>
+          <div class="cycle-bar mt-md"><div class="cycle-bar-fill" id="cycleBarFill" style="width:0%"></div></div>
+        </div>
+        <div class="card text-center" style="margin-top:12px;" id="cycleDecisionCard">
+          <h3 style="font-size:0.95rem;margin-bottom:8px;">🤔 操作决策：患者现在有反应吗？</h3>
+          <p style="font-size:0.75rem;color:var(--c-text-secondary);margin-bottom:10px;">每轮CPR后都应快速判断患者状态</p>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn--secondary btn--sm" id="cycleDecisionCPR" style="flex:1;">仍无反应<br><span style="font-size:0.65rem;">继续CPR</span></button>
+            <button class="btn btn--secondary btn--sm" id="cycleDecisionCheck" style="flex:1;">不确定<br><span style="font-size:0.65rem;">检查呼吸</span></button>
+            <button class="btn btn--danger btn--sm" id="cycleDecisionStop" style="flex:1;">停止CPR<br><span style="font-size:0.65rem;">等等看</span></button>
+          </div>
+          <p id="cycleDecisionFeedback" style="font-size:0.72rem;font-weight:700;margin-top:6px;min-height:18px;"></p>
+        </div>
+        <div class="fatigue-warn" id="fatigueWarn">
+          ⚠️ 您可能累了！<br>建议呼叫旁人轮换（2分钟轮换原则）
+          <button class="btn btn--primary btn--block mt-md" id="fatigueBtn">呼叫旁人</button>
+        </div>
+        <button class="btn btn--primary btn--block" id="cycleContinueBtn">继续下一轮按压</button>
+        <button class="btn btn--secondary btn--block" id="cycleDoneBtn" style="display:none;">5轮完成，查看结局</button>
+        <div class="knowledge-card" id="kcP9">
+          <div class="kc-icon">🔄</div>
+          <div class="kc-title">知识点：30:2循环与团队轮换</div>
+          <div class="kc-body">CPR标准循环为<strong>30次按压+2次吹气</strong>。每<strong>2分钟</strong>（约5个循环）应轮换按压者，避免疲劳导致按压质量下降。<br> 高质量CPR需要持续不间断——中断超过<strong>10秒</strong>冠状动脉灌注压会下降。<br> <strong>记住：按压不停，生命不止。</strong></div>
+          <div class="kc-source">📚 来源：《2020 AHA 指南》Class 1推荐</div>
+          <button class="btn btn--primary btn--block btn--sm" onclick="window._goTo(10)">记住了，继续</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 10: 结局判定 ===== -->
+    <section class="page" data-page="10">
+      <div class="card" style="text-align:center;">
+        <div class="outcome-icon" id="outcomeIcon"></div>
+        <h2 class="outcome-title" id="outcomeTitle"></h2>
+        <p class="outcome-detail mt-md" id="outcomeDetail"></p>
+        <div class="mt-md">
+          <button class="btn btn--primary btn--lg" id="outcomeReportBtn">查看训练报告</button>
+          <button class="btn btn--secondary mt-md" id="outcomeRetryBtn" style="display:block;width:100%;">重新训练</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 11: 智能训练报告 (Gemini视觉移植) ===== -->
+    <section class="page" data-page="11">
+      <div class="page__inner report-grid">
+        <div class="card dashboard-score-annulus-zone">
+          <div class="score-annulus-relative-frame">
+            <svg class="score-svg-annulus-object">
+              <defs>
+                <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#2563eb" />
+                  <stop offset="100%" stop-color="#e53935" />
+                </linearGradient>
+              </defs>
+              <circle class="track-bg" cx="70" cy="70" r="60"></circle>
+              <circle class="fill-bar" id="scoreRingFill" cx="70" cy="70" r="60"></circle>
+            </svg>
+            <div class="score-absolute-inner-content">
+              <div class="numeric-aggregate" id="reportTotalScore">--</div>
+              <div class="alphabetical-rating-badge" id="reportGrade">--</div>
+            </div>
+          </div>
+          <p class="text-muted mt-md" style="font-size:0.8rem;font-weight:700;">本次训练帮助你在情景中记住关键步骤。真正的价值，是让你在未来遇到类似场景时，能多一点判断和行动的勇气。</p>
+        </div>
+        <!-- 六维条形图 -->
+        <div class="card">
+          <h4 style="font-size:0.88rem;margin-bottom:10px;">📊 六维能力分析</h4>
+          <div class="bar-charts-linear-metrics-panel">
+            <div class="linear-chart-row-node">
+              <div class="linear-chart-meta-row"><span>环境安全辨识</span><span class="val-num" id="barValSafety">--%</span><span class="bar-rating" id="barRatingSafety"></span></div>
+              <div class="linear-track-base-wire"><div class="linear-track-fill-core" id="barFillSafety" style="width:0%;"></div></div>
+              <div class="deduction-reason" id="reasonSafety" style="display:none;"></div>
+            </div>
+            <div class="linear-chart-row-node">
+              <div class="linear-chart-meta-row"><span>呼救信息表达</span><span class="val-num" id="barValCall">--%</span><span class="bar-rating" id="barRatingCall"></span></div>
+              <div class="linear-track-base-wire"><div class="linear-track-fill-core" id="barFillCall" style="width:0%;"></div></div>
+              <div class="deduction-reason" id="reasonCall" style="display:none;"></div>
+            </div>
+            <div class="linear-chart-row-node">
+              <div class="linear-chart-meta-row"><span>反应呼吸判断</span><span class="val-num" id="barValBreathCheck">--%</span><span class="bar-rating" id="barRatingBreathCheck"></span></div>
+              <div class="linear-track-base-wire"><div class="linear-track-fill-core" id="barFillBreathCheck" style="width:0%;"></div></div>
+              <div class="deduction-reason" id="reasonBreathCheck" style="display:none;"></div>
+            </div>
+            <div class="linear-chart-row-node">
+              <div class="linear-chart-meta-row"><span>胸外按压质量</span><span class="val-num" id="barValCompress">--%</span><span class="bar-rating" id="barRatingCompress"></span></div>
+              <div class="linear-track-base-wire"><div class="linear-track-fill-core" id="barFillCompress" style="width:0%;"></div></div>
+              <div class="deduction-reason" id="reasonCompress" style="display:none;"></div>
+            </div>
+            <div class="linear-chart-row-node">
+              <div class="linear-chart-meta-row"><span>通气处理</span><span class="val-num" id="barValBreath">--%</span><span class="bar-rating" id="barRatingBreath"></span></div>
+              <div class="linear-track-base-wire"><div class="linear-track-fill-core" id="barFillBreath" style="width:0%;"></div></div>
+              <div class="deduction-reason" id="reasonBreath" style="display:none;"></div>
+            </div>
+            <div class="linear-chart-row-node">
+              <div class="linear-chart-meta-row"><span>AED操作</span><span class="val-num" id="barValAed">--%</span><span class="bar-rating" id="barRatingAed"></span></div>
+              <div class="linear-track-base-wire"><div class="linear-track-fill-core" id="barFillAed" style="width:0%;"></div></div>
+              <div class="deduction-reason" id="reasonAed" style="display:none;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- 训练基础数据 -->
+        <div class="card report-full-width" style="background:#f8fafc;display:flex;gap:24px;flex-wrap:wrap;justify-content:center;text-align:center;padding:14px 20px;">
+          <div><div style="font-size:0.65rem;color:var(--c-text-light);">⏱ 训练用时</div><div style="font-size:1.1rem;font-weight:800;font-family:var(--font-mono);color:var(--c-text);" id="reportTrainTime">--</div></div>
+          <div><div style="font-size:0.65rem;color:var(--c-text-light);">🔄 按压次数</div><div style="font-size:1.1rem;font-weight:800;font-family:var(--font-mono);color:var(--c-text);" id="reportPressCount">--</div></div>
+          <div><div style="font-size:0.65rem;color:var(--c-text-light);">⏸ 中断总时长</div><div style="font-size:1.1rem;font-weight:800;font-family:var(--font-mono);color:var(--c-text);" id="reportInterruptTime">请完成至少一轮30:2按压</div></div>
+          <div><div style="font-size:0.65rem;color:var(--c-text-light);">📏 平均深度</div><div style="font-size:1.1rem;font-weight:800;font-family:var(--font-mono);color:var(--c-text);" id="reportAvgDepth">--</div></div>
+          <div><div style="font-size:0.65rem;color:var(--c-text-light);">💓 平均BPM</div><div style="font-size:1.1rem;font-weight:800;font-family:var(--font-mono);color:var(--c-text);" id="reportAvgBpm">--</div></div>
+        </div>
+        <!-- 本次风险回放 -->
+        <div class="card report-full-width" id="reportRiskReplayCard" style="display:none;">
+          <h4 style="font-size:0.88rem;margin-bottom:8px;color:var(--c-danger);">⚠️ 下次要记住的关键点</h4>
+          <div id="reportRiskReplay"></div>
+          <p style="font-size:0.72rem;color:var(--c-text-light);margin-top:8px;display:none;" id="reportRiskMore"></p>
+        </div>
+        <!-- 急救决策树 -->
+        <div class="card report-full-width">
+          <h4 style="font-size:0.88rem;margin-bottom:8px;">🔗 急救决策树</h4>
+          <div id="reportDecisionTree"></div>
+        </div>
+        <!-- 表现复盘标签 -->
+        <div class="card">
+          <h4 style="font-size:0.88rem;margin-bottom:8px;">🎯 表现复盘标签</h4>
+          <div class="tag-cloud-fluid-row" id="reportGood"></div>
+          <div class="tag-cloud-fluid-row mt-md" id="reportRisks"></div>
+        </div>
+        <!-- 个性化复习建议 -->
+        <div class="card card--solid report-full-width" style="border-left:4px solid var(--c-secondary);" id="reportReviewCard">
+          <h4 style="font-size:0.88rem;margin-bottom:4px;color:var(--c-secondary);">💡 训练评语与复习建议</h4>
+          <div id="reportReview" style="font-size:0.82rem;color:var(--c-text-secondary);line-height:1.6;"></div>
+        </div>
+        <div class="card report-full-width" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+          <h4 style="font-size:0.88rem;margin-bottom:6px;">📝 训练总结</h4>
+          <p style="font-size:0.78rem;color:var(--c-text-secondary);line-height:1.6;" id="reportSummary"></p>
+        </div>
+        <button class="btn btn--primary btn--lg btn--block" id="reportNextBtn">查看知识库</button>
+        <button class="btn btn--secondary btn--lg btn--block" id="reportRetryBtn" style="margin-top:8px;">再来一次</button>
+      </div>
+    </section>
+
+    <!-- ===== PAGE 12: 知识库与证书 ===== -->
+    <section class="page" data-page="12">
+      <div class="page__inner">
+        <h3>📘 急救知识库</h3><div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0;margin-bottom:12px;"><h4 style="font-weight:800;margin-bottom:8px;font-size:0.85rem;">🖐️ 如果只记住 5 件事</h4><ol style="font-size:0.78rem;line-height:1.8;color:var(--c-text-secondary);padding-left:18px;margin:0;"><li>先确认现场安全，不要盲目冲上去。</li><li>轻拍重唤，10 秒内判断反应和呼吸。</li><li>立刻呼叫 120，并指定旁人取 AED。</li><li>胸外按压要足够深、足够快、尽量少中断。</li><li>AED 到达后立即开机，按语音提示操作，电击时所有人离开患者。</li></ol><p style="font-size:0.72rem;color:var(--c-text-muted);margin-top:6px;">敢救，不是盲目冒险，而是在记住关键步骤后，愿意比旁观多做一步。</p></div>
+        <div id="knowledgeList">
+          <!-- filled by JS -->
+        </div>
+        <h3 class="mt-md">🎓 训练证书</h3>
+        <div class="card text-center">
+          <p class="text-muted">输入你的名字生成训练记录</p>
+          <input class="phone-input" id="certNameInput" placeholder="请输入姓名" style="color:var(--c-text);background:#fff;border-color:#E2E8F0;width:100%;margin:12px 0;">
+          <button class="btn btn--primary btn--block btn--sm" id="certGenBtn">生成证书</button>
+        </div>
+        <div class="cert-preview mt-md" id="certPreview" style="display:none;">
+          <div class="cert-title">模拟训练完成证书</div>
+          <p style="font-size:0.65rem;color:#8B6914;margin-top:2px;">这不是专业资质证明，而是一次生命安全练习。希望你记住今天学到的关键步骤，在真正需要时，多一点冷静和勇气。</p>
+          <p style="font-size:13px;color:#8B6914;">授予</p>
+          <div class="cert-name" id="certNameDisplay">---</div>
+          <p class="cert-desc">你完成了一次敢救训练</p>
+          <p class="cert-desc">成绩：<strong id="certScoreDisplay">--</strong> 分</p>
+        </div>
+        <h3 class="mt-md">📚 科学依据与免责声明</h3>
+        <div class="card">
+          <p style="font-size:0.8rem;line-height:1.8;color:var(--c-text-secondary);">
+          <strong>重要声明：</strong>本作品为急救科普模拟训练，不能替代线下急救培训或专业医疗建议。真实紧急情况应立即拨打 120，并听从调度员指导。<br><br>
+          <strong>参考来源：</strong><br>
+          1. 2020 American Heart Association Guidelines for CPR and ECC<br>
+          2. 中国红十字会与中国急救相关公开科普资料<br>
+          3. AED 厂商通用使用说明及权威急救机构资料
+          </p>
+        </div>
+        <button class="btn btn--primary btn--block mt-md" id="restartBtn">🔄 重新开始训练</button>
+      </div>
+      <section style="margin-top:16px;padding:16px;background:var(--c-white);border:1px solid var(--rule);border-radius:var(--radius-sm);">
+        <h4 style="font-weight:800;margin-bottom:12px;font-size:0.9rem;">📚 参考文献与指南依据</h4>
+        <ul style="font-size:0.78rem;line-height:1.8;color:var(--c-text-secondary);padding-left:18px;margin:0;">
+          <li>American Heart Association. 2020 Guidelines for CPR and ECC.</li>
+          <li>中国心肺复苏专家共识，2018。</li>
+          <li>中国红十字会应急救护培训相关资料。</li>
+          <li>高中健康教育与生命安全教育相关教材内容。</li>
+        </ul>
+      </section>
+    </section>
+
+    <!-- ═══════════════ AED 专项训练 扩展版 (26-33, 8页) ═══════════════ -->
+    <section class="page" data-page="26"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">AED·1/8</p><h2>⚡ AED是什么？</h2><p>自动体外除颤器——公共场所的救命神器</p></div>
+    <div class="card card--highlight"><p style="font-size:15px;line-height:1.9" id="aedEx1Intro"></p></div>
+    <div class="card"><h3 style="margin-bottom:8px">关于AED，以下说法正确的是？</h3><div id="aedEx1Quiz"><button class="quiz-option" data-ok="1">① AED专为普通人设计，有语音提示引导操作</button><button class="quiz-option" data-ok="0">② AED只有医生才会使用</button><button class="quiz-option" data-ok="1">③ AED 越早使用，通常越有利于提高生存机会</button></div><div class="quiz-feedback" id="aedEx1Fb" style="display:none"></div></div>
+    <button class="btn btn--primary btn--lg btn--block" id="aedEx1Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="27"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">AED·2/8</p><h2>🫀 识别心脏骤停</h2><p>什么时候需要使用AED？</p></div>
+    <div class="card"><div style="display:flex;gap:20px;flex-wrap:wrap"><div style="flex:1;min-width:150px;background:var(--c-danger-light);border-radius:12px;padding:16px"><p style="font-weight:700;color:var(--c-danger)">需要AED的情况：</p><p style="font-size:13px;line-height:1.8">✅ 无反应+无呼吸<br>✅ 无反应+濒死喘息<br>✅ 突然倒地+无意识</p></div><div style="flex:1;min-width:150px;background:var(--c-success-light);border-radius:12px;padding:16px"><p style="font-weight:700;color:var(--c-success)">不需要AED：</p><p style="font-size:13px;line-height:1.8">❌ 有呼吸有意识<br>❌ 能正常说话<br>❌ 只是晕厥但有脉搏</p></div></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">有人倒地，你应该首先做什么？</h3><div id="aedEx2Quiz"><button class="quiz-option" data-ok="1">拍双肩+大声呼喊，判断是否有反应</button><button class="quiz-option" data-ok="0">立即使用AED电击</button><button class="quiz-option" data-ok="0">直接做CPR</button></div><div class="quiz-feedback" id="aedEx2Fb" style="display:none"></div></div>
+    <button class="btn btn--primary btn--lg btn--block" id="aedEx2Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="28"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">AED·3/8</p><h2>🔘 第一步：开机</h2><p>打开AED电源——一切从这里开始</p></div>
+    <div class="card"><div style="text-align:center;font-size:64px;padding:20px">🔘</div><p style="font-weight:700;text-align:center;margin:8px 0">找到AED后，按下绿色电源按钮</p><p style="font-size:14px;line-height:1.8;text-align:center">AED会立即发出<b>语音提示</b>，告诉你每一步该做什么。<br>部分型号打开盖子即自动开机。<br><b>注意：AED一旦开机就不要关闭，直到急救人员到达。</b></p></div>
+    <div class="card"><h3 style="margin-bottom:8px">AED通常放在什么地方？</h3><div id="aedEx3Quiz"><button class="quiz-option" data-ok="1">🏢 机场、地铁、商场、办公楼等公共场所墙上</button><button class="quiz-option" data-ok="0">🏠 每个人家里都有</button><button class="quiz-option" data-ok="1">🚑 救护车、消防车、警车上</button></div><div class="quiz-feedback" id="aedEx3Fb" style="display:none"></div></div>
+    <button class="btn btn--primary btn--lg btn--block" id="aedEx3Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="29"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">AED·4/8</p><h2>📍 第二步：贴电极片</h2><p>正确的电极片位置至关重要</p></div>
+    <div class="card card--highlight"><div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:150px;text-align:center"><div style="font-size:60px">🫀</div><p style="font-weight:700">右上胸</p><p style="font-size:12px;color:var(--c-text-secondary)">右锁骨下方<br>胸骨右缘</p></div><div style="font-size:40px">→</div><div style="flex:1;min-width:150px;text-align:center"><div style="font-size:60px">📍</div><p style="font-weight:700">左下侧</p><p style="font-size:12px;color:var(--c-text-secondary)">左腋前线第5肋间<br>心尖部</p></div></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">贴电极片前需要注意什么？</h3><div id="aedEx4Quiz"><button class="quiz-option" data-ok="1">擦干胸部汗水/水分（否则粘贴不牢）</button><button class="quiz-option" data-ok="1">去除胸部过多胸毛（影响导电）</button><button class="quiz-option" data-ok="0">先涂上导电膏</button></div><div class="quiz-feedback" id="aedEx4Fb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="aedEx4Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="30"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">AED·5/8</p><h2>🔍 第三步：分析心律</h2><p>AED自动判断是否需要电击</p></div>
+    <div class="aed-panel"><div class="aed-screen"><div class="aed-msg">正在分析心律...</div><div class="aed-sub">请勿触摸患者</div></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">分析心律时，以下做法正确的是？</h3><div id="aedEx5Quiz"><button class="quiz-option" data-ok="1">所有人远离患者，保持静止</button><button class="quiz-option" data-ok="0">继续胸外按压不中断</button><button class="quiz-option" data-ok="0">用手扶住患者以防晃动</button></div><div class="quiz-feedback" id="aedEx5Fb" style="display:none"></div></div><p style="font-size:13px;color:var(--c-text-secondary);text-align:center">💡 AED能识别两种心律：需电击（室颤/无脉室速）vs 不需电击（正常心律/停搏）</p>
+    <button class="btn btn--primary btn--lg btn--block" id="aedEx5Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="31"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">AED·6/8</p><h2>⚡ 第四步：安全放电</h2><p>电击前必须确保所有人的安全</p></div>
+    <div class="card card--danger"><p style="font-weight:700;color:var(--c-danger);margin-bottom:12px">⚠️ 电击前安全确认清单：</p><div id="aedEx6Checks"><label class="call-check"><input type="checkbox" value="ok1">✅ 我（施救者）已远离患者</label><label class="call-check"><input type="checkbox" value="ok2">✅ 周围所有人已站开</label><label class="call-check"><input type="checkbox" value="ok3">✅ 患者周围无水渍</label><label class="call-check"><input type="checkbox" value="ok4">✅ 确认无人接触患者身体</label><label class="call-check"><input type="checkbox" value="bad1">❌ 我用手按住患者</label></div><button class="btn btn--danger btn--lg btn--block" id="aedEx6Shock" style="display:none">⚡ 所有人闪开！放电！</button></div><p style="text-align:center;color:var(--c-success);font-weight:700;display:none" id="aedEx6Ok">✅ 电击完成！立即恢复CPR</p>
+    <button class="btn btn--primary btn--lg btn--block" id="aedEx6Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="32"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">AED·7/8</p><h2>🔄 特殊情况 + 电击后CPR</h2></div>
+    <div class="card"><h3 style="margin-bottom:12px">以下特殊情况的处理，正确的是？</h3><div id="aedEx7Quiz"><button class="quiz-option" data-ok="1">💧 患者胸部有水→先擦干再贴电极片</button><button class="quiz-option" data-ok="1">🫀 装有心脏起搏器→电极片避开起搏器至少2.5cm</button><button class="quiz-option" data-ok="0">👶 8岁以下儿童→使用成人电极片</button><button class="quiz-option" data-ok="1">💊 胸口有药物贴片→先取下贴片再清洁皮肤</button></div><div class="quiz-feedback" id="aedEx7Fb" style="display:none"></div></div>
+    <div class="card card--highlight"><p style="font-weight:700;margin-bottom:8px">电击后最重要的是：</p><p style="font-size:15px;line-height:1.8;text-align:center"><b>⚡ 电击后→立即恢复CPR！</b><br>从胸外按压开始，不要浪费时间检查脉搏<br>AED会在2分钟后自动再次分析心律</p></div>
+    <button class="btn btn--primary btn--lg btn--block" id="aedEx7Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="33"><div class="page__inner"><div style="text-align:center;padding:20px 0"><div style="font-size:80px">⚡</div><h2 style="font-size:24px;font-weight:800">AED专项训练·完成！</h2></div><div class="card text-center"><div class="score-circle" style="margin:0 auto"><div class="big-num" id="aedExScore">0</div><div class="big-label">分</div></div></div><div class="advice-card" id="aedExAdvice"></div><button class="btn btn--primary btn--lg btn--block" id="aedExRetry">🔄重新训练</button><button class="btn btn--ghost btn--block mt-md" id="aedExHome">🏠返回首页</button></div></section>
+
+    <!-- ═══════════════ 气道梗阻 扩展版 (34-42, 9页) ═══════════════ -->
+    <section class="page" data-page="34"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">气道梗阻·1/9</p><h2>🫁 认识气道梗阻</h2><p>气道异物梗阻是一类需要快速识别和处理的急症</p></div>
+    <div class="card card--highlight"><p style="font-size:15px;line-height:1.9" id="chEx1Intro"></p></div>
+    <div class="card"><h3 style="margin-bottom:12px">容易引发气道梗阻的高危食物包括？</h3><div class="quiz-option correct" style="pointer-events:none">🍡 年糕、汤圆、果冻（易整块滑入气道）</div><div class="quiz-option correct" style="pointer-events:none">🥜 花生、瓜子等坚果（易误吸入气道）</div><div class="quiz-option correct" style="pointer-events:none">🍬 硬糖、大块肉类</div></div>
+    <p style="font-size:13px;color:var(--c-warning);font-weight:600;text-align:center">⚠️ 老人和5岁以下儿童是最高风险人群</p>
+    <button class="btn btn--primary btn--lg btn--block" id="chEx1Btn">继续→</button></div></section>
+
+    <section class="page" data-page="35"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">气道梗阻·2/9</p><h2>🔍 识别：部分梗阻 vs 完全梗阻</h2><p>这是决定是否需要干预的关键判断</p></div>
+    <div class="card"><div style="display:flex;gap:16px;flex-wrap:wrap"><div style="flex:1;min-width:150px;background:var(--c-warning-light);border-radius:12px;padding:16px"><p style="font-weight:700;color:var(--c-warning)">部分梗阻：</p><p style="font-size:13px;line-height:1.8">✅ 能咳嗽（有力）<br>✅ 能说话<br>✅ 能呼吸（有喘鸣音）<br><b>→鼓励咳嗽！不要干预！</b></p></div><div style="flex:1;min-width:150px;background:var(--c-danger-light);border-radius:12px;padding:16px"><p style="font-weight:700;color:var(--c-danger)">完全梗阻：</p><p style="font-size:13px;line-height:1.8">❌ 无法咳嗽<br>❌ 无法说话<br>❌ 双手抓喉（窒息手势）<br>❌ 面色发紫<br><b>→立即海姆立克！</b></p></div></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">有人呛到后还能咳嗽说话，你应该？</h3><div id="chEx2Quiz"><button class="quiz-option" data-ok="1">鼓励他继续用力咳嗽，在旁边观察</button><button class="quiz-option" data-ok="0">立即做海姆立克法</button></div><div class="quiz-feedback" id="chEx2Fb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="chEx2Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="36"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">气道梗阻·3/9</p><h2>👤 成人海姆立克法详解</h2><p>"剪刀、石头、布"——全世界通用的救命三招</p></div>
+    <div class="card card--highlight"><div style="font-size:15px;line-height:2.6">
+    <p><b>🫱 第一步·剪刀：</b>站在患者背后，用两指找到肚脐位置，向上两横指，这就是冲击点。</p>
+    <p><b>✊ 第二步·石头：</b>一手握拳，拳心朝向患者腹部，放在刚才定位的冲击点上。</p>
+    <p><b>🖐️ 第三步·布：</b>另一只手包住拳头，双手紧扣。</p>
+    <p><b>🔄 第四步·冲击：</b>用力向内上方（45°角）快速冲击，每次冲击要果断有力。连续5次为一组。</p></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">海姆立克冲击的正确方向是？</h3><div id="chEx3Quiz"><button class="quiz-option" data-ok="1">↗️ 向内上方（45°）快速冲击</button><button class="quiz-option" data-ok="0">→ 水平方向推</button><button class="quiz-option" data-ok="0">↓ 向下按压</button></div><div class="quiz-feedback" id="chEx3Fb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="chEx3Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="37"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">气道梗阻·4/9</p><h2>✍️ 成人海姆立克·实战练习</h2></div>
+    <div class="card"><h3 style="margin-bottom:8px">施救者站姿和手臂位置？</h3><div id="chEx4aQuiz"><button class="quiz-option" data-ok="1">🧍 站在背后，双臂从患者腋下穿过环抱腰部</button><button class="quiz-option" data-ok="0">🧍 站在侧面单手操作</button></div><div class="quiz-feedback" id="chEx4aFb" style="display:none"></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">如果5次冲击后异物仍未排出？</h3><div id="chEx4bQuiz"><button class="quiz-option" data-ok="1">🔄 继续做5次一组，反复进行直到异物排出或患者昏迷</button><button class="quiz-option" data-ok="0">放弃等待救护车</button><button class="quiz-option" data-ok="0">用力拍患者后背</button></div><div class="quiz-feedback" id="chEx4bFb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="chEx4Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="38"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">气道梗阻·5/9</p><h2>🤰 孕妇与肥胖者的海姆立克</h2><p>冲击位置必须改变——否则可能造成伤害</p></div>
+    <div class="card card--highlight"><p style="font-weight:700;margin-bottom:8px">为什么不能冲击腹部？</p><p style="font-size:14px;line-height:1.8">孕妇：冲击腹部会<b>压迫子宫</b>，可能导致胎盘早剥、胎儿损伤。<br>肥胖者：腹部脂肪过厚，冲击力<b>无法有效传递</b>到膈肌。<br><br><b>✅ 正确做法：胸部冲击法</b>——站到背后，双手放在<b>胸骨中下段</b>（和CPR按压位置相同），向内后方冲击。</p></div>
+    <div class="card"><h3 style="margin-bottom:8px">孕妇海姆立克冲击位置在？</h3><div id="chEx5Quiz"><button class="quiz-option" data-ok="1">🤰 胸骨中下段（胸部冲击）</button><button class="quiz-option" data-ok="0">🤰 和普通人一样冲击腹部</button></div><div class="quiz-feedback" id="chEx5Fb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="chEx5Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="39"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">气道梗阻·6/9</p><h2>👶 婴儿气道梗阻急救</h2><p>婴儿(<1岁)的急救方法完全不同！</p></div>
+    <div class="card card--highlight"><div style="font-size:14px;line-height:2.2"><p><b>1️⃣ 体位：</b>将婴儿面朝下放在你的前臂上，用手托住头部和下颌，头部低于躯干。</p><p><b>2️⃣ 5次拍背：</b>用另一只手掌根部，在婴儿<b>两侧肩胛骨之间</b>用力拍击5次。</p><p><b>3️⃣ 翻转：</b>将婴儿翻转为面朝上，保持头部低于躯干。</p><p><b>4️⃣ 5次压胸：</b>用两根手指（食中二指）在<b>胸骨下半段（两乳头连线下方）</b>快速按压5次，深度约4cm。</p><p><b>5️⃣ 交替重复：</b>5次拍背+5次压胸为一组，反复进行直到异物排出或婴儿失去反应。</p></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">婴儿急救时绝对禁止？</h3><div class="quiz-option" style="pointer-events:none;border-color:var(--c-danger)">❌ 用手指伸进嘴里掏异物（可能推得更深！）</div><div class="quiz-option" style="pointer-events:none;border-color:var(--c-danger)">❌ 倒挂着摇晃婴儿（可能造成颈椎损伤！）</div></div>
+    <button class="btn btn--primary btn--lg btn--block" id="chEx6Btn">继续→</button></div></section>
+
+    <section class="page" data-page="40"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">气道梗阻·7/9</p><h2>🆘 自救法 + 轮椅患者</h2></div>
+    <div class="card"><h3 style="margin-bottom:12px">如果你独自一人被噎住，无法出声呼救：</h3><div style="font-size:14px;line-height:2"><p><b>方法一·椅背法：</b>找到一个坚固的椅背或桌角，对准上腹部（肚脐上方），用身体重量向下冲击。</p><p><b>方法二·拳头法：</b>自己用拳头对准上腹部，另一只手包住，向内上方快速冲击。也可以靠在墙上增加力度。</p><p><b>⚠️ 关键：</b>自救要趁还有意识的时候！一旦感觉呼吸困难立即行动，不要犹豫。同时尽量发出声音或制造响动吸引注意。</p></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">轮椅上的患者海姆立克应该？</h3><div id="chEx7Quiz"><button class="quiz-option" data-ok="1">🦽 从轮椅后方进行，手法同站立患者</button><button class="quiz-option" data-ok="0">🦽 把患者从轮椅上拉起来再做</button></div><div class="quiz-feedback" id="chEx7Fb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="chEx7Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="41"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">气道梗阻·8/9</p><h2>🆘 患者昏迷后怎么办</h2><p>梗阻→昏迷=立即转换急救模式！</p></div>
+    <div class="card card--danger"><div style="font-size:14px;line-height:2.2"><p><b>1️⃣ 安全放平：</b>将患者轻轻平放在地面上。</p><p><b>2️⃣ 立即呼叫120：</b>如果之前没有呼叫，现在必须立即呼叫！</p><p><b>3️⃣ 开始CPR：</b>从30次胸外按压开始。注意：<b>胸外按压本身也可能帮助排出异物</b>，因为按压产生的胸内压变化可能推动异物移动。</p><p><b>4️⃣ 检查口腔：</b>每次打开气道准备吹气前，快速看一下口腔内有无<b>可见的异物</b>。如果看到，小心取出。不要盲目用手指扫荡。</p><p><b>5️⃣ 持续CPR：</b>30:2循环不要停，直到救护车到达或患者出现反应。</p></div></div>
+    <button class="btn btn--primary btn--lg btn--block" id="chEx8Btn">继续→</button></div></section>
+
+    <section class="page" data-page="42"><div class="page__inner"><div style="text-align:center;padding:20px 0"><div style="font-size:80px">🫁</div><h2 style="font-size:24px;font-weight:800">气道梗阻急救·完成！</h2></div><div class="card text-center"><div class="score-circle" style="margin:0 auto"><div class="big-num" id="chExScore">0</div><div class="big-label">分</div></div></div><div class="advice-card" id="chExAdvice"></div><button class="btn btn--primary btn--lg btn--block" id="chExRetry">🔄重新训练</button><button class="btn btn--ghost btn--block mt-md" id="chExHome">🏠返回首页</button></div></section>
+
+    <!-- ═══════════════ 创伤急救 扩展版 (43-50, 8页) ═══════════════ -->
+    <section class="page" data-page="43"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">创伤急救·1/8</p><h2>🩹 现场安全：保己救人</h2><p>急救第一铁律——先确保自身安全</p></div>
+    <div class="card card--highlight"><p style="font-size:15px;line-height:1.9" id="trEx1Intro"></p></div>
+    <div class="card"><h3 style="margin-bottom:8px">到达事故现场，首要步骤是？</h3><div id="trEx1Quiz"><button class="quiz-option" data-ok="1">⚠️ 评估现场有无危险（火、电、坠落物、交通等）</button><button class="quiz-option" data-ok="1">🧤 戴上手套等个人防护装备（PPE）</button><button class="quiz-option" data-ok="0">🏃 立刻冲过去救人</button></div><div class="quiz-feedback" id="trEx1Fb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="trEx1Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="44"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">创伤急救·2/8</p><h2>🔤 初步评估：DRABC法则</h2><p>系统化的伤情评估流程</p></div>
+    <div class="card"><div style="font-size:14px;line-height:2.2"><p><b>D - Danger</b> 危险：评估环境是否安全</p><p><b>R - Response</b> 反应：拍肩呼唤，判断意识</p><p><b>A - Airway</b> 气道：检查气道是否通畅</p><p><b>B - Breathing</b> 呼吸：观察胸廓起伏10秒</p><p><b>C - Circulation</b> 循环：检查有无严重出血</p></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">DRABC中，发现严重出血应该？</h3><div id="trEx2Quiz"><button class="quiz-option" data-ok="1">立即控制出血（加压止血），再继续评估</button><button class="quiz-option" data-ok="0">先完成全部评估再处理出血</button></div><div class="quiz-feedback" id="trEx2Fb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="trEx2Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="45"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">创伤急救·3/8</p><h2>🩸 止血法一：直接压迫</h2><p>最基本、最重要、最有效的止血方法</p></div>
+    <div class="card card--highlight"><div style="font-size:14px;line-height:2.2"><p><b>🖐️ 操作方法：</b></p><p>1. 用干净纱布/布料/毛巾直接覆盖伤口</p><p>2. 用手掌<b>用力持续按压</b>（不要松开看是否止血！）</p><p>3. 如果纱布被血浸透，<b>不要取下</b>——在上面再加一层继续压</p><p>4. 持续按压<b>至少10-15分钟</b>，不要频繁松手查看</p><p>5. 如果多层敷料后仍无法控制出血，考虑使用止血带（见下页）</p></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">直接压迫止血时，多久检查一次出血情况？</h3><div id="trEx3Quiz"><button class="quiz-option" data-ok="1">⏰ 持续压10-15分钟后再检查，不要频繁松开</button><button class="quiz-option" data-ok="0">每30秒松开看一次</button><button class="quiz-option" data-ok="0">一直压到救护车来，完全不看</button></div><div class="quiz-feedback" id="trEx3Fb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="trEx3Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="46"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">创伤急救·4/8</p><h2>🪢 止血法二：止血带</h2><p>仅用于四肢大动脉喷射状出血——最后手段</p></div>
+    <div class="card card--danger"><div style="font-size:14px;line-height:2"><p><b>⚠️ 止血带使用指征（同时满足）：</b></p><p>✅ 四肢严重出血（喷射状/涌出状）<br>✅ 直接压迫止血无效<br>✅ 有专业止血带或可制作临时止血带</p><p><b>📌 操作要点：</b></p><p>📍 位置：伤口<b>近心端5-8cm</b>处（不要扎在关节上）<br>🕐 <b>记录时间！</b>在额头或止血带上写下使用时间<br>⏰ 上好止血带后<b>不要自行松开</b>！在额头或止血带上记录使用时间<br>🚫 是否放松<b>由专业医疗人员决定</b>——尽快转运至医院</p></div></div>
+    <button class="btn btn--primary btn--lg btn--block" id="trEx4Btn">继续→</button></div></section>
+
+    <section class="page" data-page="47"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">创伤急救·5/8</p><h2>🩹 伤口包扎技术</h2></div>
+    <div class="card"><h3 style="margin-bottom:12px">包扎的目的和原则：</h3><div style="font-size:14px;line-height:2"><p>✅ <b>保护伤口</b>——防止污染和感染</p><p>✅ <b>加压止血</b>——辅助止血</p><p>✅ <b>固定敷料</b>——保持敷料在位</p><p>✅ <b>减轻疼痛</b>——减少移动</p><p>❌ <b>不要做的事：</b>给伤口上药、用脏布包扎、包扎过紧阻断循环</p></div></div>
+    <div class="card"><h3 style="margin-bottom:8px">三角巾/绷带包扎后如何检查是否过紧？</h3><div id="trEx5Quiz"><button class="quiz-option" data-ok="1">检查远端指（趾）甲颜色——按压后应在2秒内恢复粉红</button><button class="quiz-option" data-ok="0">只要不疼就说明不紧</button></div><div class="quiz-feedback" id="trEx5Fb" style="display:none"></div></div><button class="btn btn--primary btn--lg btn--block" id="trEx5Btn" style="display:none">继续→</button></div></section>
+
+    <section class="page" data-page="48"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">创伤急救·6/8</p><h2>🦴 骨折的临时固定</h2></div>
+    <div class="card card--highlight"><div style="font-size:14px;line-height:2.2"><p><b>骨折固定的关键原则：</b></p><p>📌 <b>不移动伤肢</b>——除非有立即危险</p><p>📌 <b>固定上下两个关节</b>——夹板必须跨越骨折部位上下各一个关节</p><p>📌 <b>用硬物做夹板</b>——木板、杂志卷、硬纸板、甚至健侧肢体</p><p>📌 <b>用软物做衬垫</b>——衣服、毛巾垫在夹板和皮肤之间</p><p>📌 <b>上肢骨折</b>——用三角巾悬吊于胸前</p><p>📌 <b>下肢骨折</b>——用健侧腿做天然夹板，两腿之间垫软物后捆绑</p></div></div>
+    <button class="btn btn--primary btn--lg btn--block" id="trEx6Btn">继续→</button></div></section>
+
+    <section class="page" data-page="49"><div class="page__inner"><div class="cpr-hero"><p class="cpr-step">创伤急救·7/8</p><h2>🚑 脊柱损伤与安全搬运</h2><p>错误的搬运可能造成严重后果</p></div>
+    <div class="card card--danger"><div style="font-size:14px;line-height:1.9"><p><b>⚠️ 哪些情况下必须怀疑脊柱损伤？</b></p><p>🚗 车祸/高处坠落/头部外伤<br>🏊 跳水受伤/运动碰撞<br>😵 伤者诉说颈部或背部疼痛<br>🦵 肢体麻木/无力/无法动弹</p><p><b>✅ 安全搬运法——多人平托法：</b></p><p>1. 至少<b>3-4人</b>同时操作<br>2. 一人固定<b>头部和颈部</b>（保持中立位）<br>3. 其他人同时用手臂托起<b>肩、腰、臀、腿</b><br>4. <b>保持头颈躯干一条直线</b>，整体平移<br>5. 放在硬质担架或门板上</p></div></div>
+    <button class="btn btn--primary btn--lg btn--block" id="trEx7Btn">继续→</button></div></section>
+
+    <section class="page" data-page="50"><div class="page__inner"><div style="text-align:center;padding:20px 0"><div style="font-size:80px">🩹</div><h2 style="font-size:24px;font-weight:800">创伤急救·完成！</h2></div><div class="card text-center"><div class="score-circle" style="margin:0 auto"><div class="big-num" id="trExScore">0</div><div class="big-label">分</div></div></div><div class="advice-card" id="trExAdvice"></div><button class="btn btn--primary btn--lg btn--block" id="trExRetry">🔄重新训练</button><button class="btn btn--ghost btn--block mt-md" id="trExHome">🏠返回首页</button></div></section>
+
+  </div><!-- /page-wrapper -->
+</main>
+<aside class="dashboard-panel" id="sidePanel">
+<div class="panel-title">📋 操作指引</div><div class="panel-text" id="panelDesc">选择训练模块开始急救技能学习。</div>
+<div class="panel-divider"></div>
+<div class="panel-title">⚠️ 关键注意事项</div>
+<div class="tip-card red" id="panelWarning">开始训练后，你将根据随机场景完成急救情景模拟。</div>
+<div class="panel-divider"></div>
+<div class="panel-title">📋 当前场景指南</div>
+<div class="tip-card" id="panelGuide">不同场景下AED使用有差异——公共场所、潮湿环境、儿童等。</div>
+<div class="panel-divider"></div>
+<div class="panel-title">📊 实时得分</div>
+<div class="panel-metric"><div class="panel-metric-val" id="panelLiveScore">0</div><div class="panel-metric-lbl">/ 100</div></div>
+<div class="panel-divider"></div>
+<div class="panel-title">🔢 关键参数</div>
+<div class="tip-card amber" id="panelData">成人按压深度5-6cm | 频率100-120次/分 | 按压通气比30:2</div>
+</aside>
+<button class="mobile-toggle-btn left" id="mobilePanelToggle" onclick="var s=document.getElementById('sidebar');var p=document.getElementById('sidePanel');var o=document.getElementById('mobileDrawerOverlay');var l=this;var r=document.getElementById('mobileSidebarToggle');p.classList.toggle('open');s.classList.remove('open');if(p.classList.contains('open')){o.classList.add('show');l.textContent='✕';l.style.display='none';if(r)r.style.display='none'}else{o.classList.remove('show');l.textContent='📋';l.style.display='flex';if(r)r.style.display='flex'}">📋</button>
+<button class="mobile-toggle-btn right" id="mobileSidebarToggle" onclick="var s=document.getElementById('sidebar');var p=document.getElementById('sidePanel');var o=document.getElementById('mobileDrawerOverlay');var l=document.getElementById('mobilePanelToggle');var t=this;s.classList.toggle('open');p.classList.remove('open');if(s.classList.contains('open')){o.classList.add('show');t.textContent='✕';t.style.display='none';if(l)l.style.display='none'}else{o.classList.remove('show');t.textContent='☰';t.style.display='flex';if(l)l.style.display='flex'}">☰</button>
+</div><!-- /dashboard-body -->
+
+  <!-- Global Footer -->
+  <footer id="global-footer" class="hidden">
+    <label class="vib-toggle" id="vibToggleFooter">
+      <input type="checkbox" id="vibrationToggle2" checked> 📳 震动
+    </label>
+    <button class="ai-helper-btn" id="aiHelperBtn">💡 急救提示</button>
+  </footer>
+
+  <!-- AI Helper Bubble -->
+  <div class="ai-bubble" id="aiBubble"></div>
+
+</div><!-- /app-container -->
+
+<!-- Modal Overlay -->
+<div id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-icon" id="modalIcon"></div>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-text" id="modalText"></div>
+    <div class="modal-btns" id="modalBtns"></div>
+  </div>
+</div>
+
+<!-- Particle Canvas -->
+<canvas id="particle-canvas"></canvas>
+
+<script src="js/main.js"></script>
+<div id="mobileDrawerOverlay" onclick="var s=document.getElementById('sidebar'),p=document.getElementById('sidePanel');s.classList.remove('open');p.classList.remove('open');this.classList.remove('show');var l=document.getElementById('mobilePanelToggle'),r=document.getElementById('mobileSidebarToggle');if(l){l.textContent='📋';l.style.display='flex'}if(r){r.textContent='☰';r.style.display='flex'}"></div>
+<div class="mobile-guide-overlay" id="mobileGuideOverlay"></div>
+<div class="mobile-guide-panel" id="mobileGuidePanel">
+  <button class="panel-close" id="mobilePanelClose">✕</button>
+  <h4>📋 当前场景指南</h4><div class="guide-content" id="mpGuide"></div>
+  <h4>⚠️ 场景注意事项</h4><div class="guide-content" id="mpWarning"></div>
+  <h4>🔢 关键参数</h4><div class="guide-content" id="mpData"></div>
+</div>
+</body></html>

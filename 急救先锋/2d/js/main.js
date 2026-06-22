@@ -3473,8 +3473,8 @@ window.addEventListener('popstate', (e) => {
       $('#aedEx1Btn').onclick = function() { showModPage(27,'AED'); initQuiz('aedEx2Quiz','aedEx2Fb','aedEx2Btn',10,function(){modScore.aedEx+=10;}); };
     });
     // Page 27-33: 单选Quiz
-    $('#aedEx2Btn').onclick = function() { showModPage(28,'AED'); initQuiz('aedEx3Quiz','aedEx3Fb','aedEx3Btn',10,function(){modScore.aedEx+=10;}); };
-    $('#aedEx3Btn').onclick = function() { showModPage(29,'AED'); initQuiz('aedEx4Quiz','aedEx4Fb','aedEx4Btn',15,function(){modScore.aedEx+=15;}); };
+    $('#aedEx2Btn').onclick = function() { showModPage(28,'AED'); initMultiQuiz('aedEx3Quiz','aedEx3Fb','aedEx3Btn',10,function(){modScore.aedEx+=10;}); };
+    $('#aedEx3Btn').onclick = function() { showModPage(29,'AED'); initMultiQuiz('aedEx4Quiz','aedEx4Fb','aedEx4Btn',15,function(){modScore.aedEx+=15;}); };
     $('#aedEx4Btn').onclick = function() { showModPage(30,'AED'); initQuiz('aedEx5Quiz','aedEx5Fb','aedEx5Btn',10,function(){modScore.aedEx+=10;}); };
     $('#aedEx5Btn').onclick = function() { showModPage(31,'AED'); initAedShock(); };
     function initAedShock() {
@@ -3510,6 +3510,7 @@ window.addEventListener('popstate', (e) => {
       // Quiz 4a → on correct, chain to quiz 4b
       initQuiz('chEx4aQuiz','chEx4aFb','chEx4Btn',10,function(){
         modScore.chEx+=10;
+        try { $('#chEx4Btn').textContent = '第2问 →'; } catch(e) {}
         initQuiz('chEx4bQuiz','chEx4bFb','chEx4Btn',10,function(){
           modScore.chEx+=10;
           showModPage(38,'气道梗阻');
@@ -3538,7 +3539,7 @@ window.addEventListener('popstate', (e) => {
     var intros = ['你在<span class="highlight">建筑工地</span>附近，工人从高处摔落腿部流血。<b>首先要做什么？</b>','<span class="highlight">厨房里</span>家人切菜切到手指鲜血直流。<b>正确的止血方法？</b>','<span class="highlight">交通事故</span>电动车骑手摔倒在地手臂疑似骨折。<b>该如何处理？</b>'];
     try { $('#trEx1Intro').innerHTML = intros[Math.floor(Math.random()*intros.length)]; } catch(e) {}
     showModPage(43, '创伤急救基础');
-    initQuiz('trEx1Quiz','trEx1Fb','trEx1Btn',10,function(){modScore.trEx+=10;});
+    initMultiQuiz('trEx1Quiz','trEx1Fb','trEx1Btn',10,function(){modScore.trEx+=10;});
     $('#trEx1Btn').onclick = function() { showModPage(44,'创伤急救'); initQuiz('trEx2Quiz','trEx2Fb','trEx2Btn',10,function(){modScore.trEx+=10;}); };
     $('#trEx2Btn').onclick = function() { showModPage(45,'创伤急救'); initQuiz('trEx3Quiz','trEx3Fb','trEx3Btn',15,function(){modScore.trEx+=15;}); };
     $('#trEx3Btn').onclick = function() { showModPage(46,'创伤急救'); modScore.trEx+=10; };

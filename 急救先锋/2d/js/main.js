@@ -303,7 +303,7 @@ const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = 
 // ==========================================================
 // Page navigation helpers (global scope, always available)
 window._goTo = (n) => { goToPage(n); };
-window._startTraining = () => { Audio.init(); goToPage(2); };
+window._startTraining = () => { Audio.init(); _initSpeechVoices(); goToPage(2); };
 window._completeEnv = () => { state.completed[3] = true; goToPage(4); };
 
 window._cprCallSubmit = () => {}; // Deprecated; conversation system replaces this
@@ -1519,12 +1519,43 @@ var voiceProfiles = {
   urgent:     { rate: 1.5, pitch: 1.3, vol: 1.0 }
 };
 
-// ── New speak: profile + cancel previous ──
+// ── Mobile speech warm-up (iOS requires user-gesture priming) ──
+var _speechVoicesReady = false;
+var _chineseVoice = null;
+
+function _initSpeechVoices() {
+  if (!('speechSynthesis' in window)) return;
+  var voices = window.speechSynthesis.getVoices();
+  if (voices.length) {
+    _cacheChineseVoice(voices);
+    _speechVoicesReady = true;
+  }
+  window.speechSynthesis.onvoiceschanged = function() {
+    var v = window.speechSynthesis.getVoices();
+    if (v.length) { _cacheChineseVoice(v); _speechVoicesReady = true; }
+  };
+  // iOS warm-up: silent utterance activates the speech API
+  var u = new SpeechSynthesisUtterance('');
+  u.volume = 0; u.rate = 1;
+  window.speechSynthesis.speak(u);
+}
+
+function _cacheChineseVoice(voices) {
+  _chineseVoice = voices.find(function(v){ return v.lang === 'zh-CN'; })
+    || voices.find(function(v){ return v.lang.indexOf('zh-') === 0; })
+    || voices.find(function(v){ return v.lang.indexOf('zh') === 0; })
+    || null;
+}
+
+// ── Speak with voice profile ──
 function speak(text, profile) {
   if (!('speechSynthesis' in window)) return;
+  // Lazy-load voices on first speak (catches non-button-initiated flows)
+  if (!_speechVoicesReady) _initSpeechVoices();
   var p = voiceProfiles[profile] || voiceProfiles.guide;
   var u = new SpeechSynthesisUtterance(text);
   u.lang = 'zh-CN'; u.rate = p.rate; u.pitch = p.pitch; u.volume = p.vol;
+  if (_chineseVoice) u.voice = _chineseVoice;
   window.speechSynthesis.speak(u);
 }
 
@@ -1532,12 +1563,14 @@ function speak(text, profile) {
 function speakSequence(arr, profile) {
   if (!arr || !arr.length) return;
   if (!('speechSynthesis' in window)) return;
+  if (!_speechVoicesReady) _initSpeechVoices();
   window.speechSynthesis.cancel();
   var p = voiceProfiles[profile] || voiceProfiles.guide;
   function next(i) {
     if (i >= arr.length) return;
     var u = new SpeechSynthesisUtterance(arr[i]);
     u.lang = 'zh-CN'; u.rate = p.rate; u.pitch = p.pitch; u.volume = p.vol;
+    if (_chineseVoice) u.voice = _chineseVoice;
     u.onend = function() { setTimeout(function() { next(i + 1); }, 400); };
     window.speechSynthesis.speak(u);
   }
